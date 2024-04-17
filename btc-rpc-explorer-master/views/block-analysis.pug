@@ -1,0 +1,799 @@
+extends layout
+
+block headContent
+	title Block Analysis ##{result.getblock.height.toLocaleString()}, #{result.getblock.hash}
+
+block content
+	
+
+	+pageTitle(`Block Analysis`, result.getblock.hash, true)
+		if (result.getblock)
+			a.btn.btn-sm.btn-primary.ms-2(href=`./block/${result.getblock.hash}`) &laquo; Back to Block
+
+
+	if (block && (!block.tx || block.tx.length == 0) && global.prunedBlockchain)
+		div.alert.alert-warning.pb-0(role="alert")
+			h6.mb-2 Block Analysis Unavailable
+			- var msgMarkdown = "Blockchain `pruning` is enabled on your node. This setting tells your node that after validating transactions it may discard data that is non-essential for future validation needs.\n\nThis block has been pruned, meaning that all non-essential data has been deleted, including the data needed for a block analysis.";
+			| !{markdown(msgMarkdown)}
+
+	else
+
+		+contentSection("Summary")
+			+summaryRow(3 + (result.getblock.weight ? 1 : (result.getblock.size ? 1 : 0)))
+				+summaryItem("Date")
+					+timestamp(result.getblock.time, {agoOptions:{oneElement:true}})
+
+				if (result.getblock.weight)
+					+summaryItem("Weight", null, "wu", "Weight Units")
+						| #{result.getblock.weight.toLocaleString()}
+
+				else if (result.getblock.size)
+					+summaryItem("Size", null, "B", "Bytes")
+						| #{result.getblock.size.toLocaleString()}
+
+
+				+summaryItem("Transactions")
+					| #{result.getblock.nTx.toLocaleString()}
+
+				+summaryItem("Confirmations")
+					+confirmations(result.getblock.confirmations, false)
+
+		#progress-wrapper.mb-huge
+			.card.shadow-sm.mb-3
+				.card-body
+					span Loading transactions: 
+						span(id="progress-text")
+					.progress.mt-2(id="progress-bar", style="height: 7px;")
+						.progress-bar(id="data-progress", role="progressbar", aria-valuenow="0", aria-valuemin="0" ,aria-valuemax="100")
+
+
+	#main-content(style="display: none;")
+		.row
+			.col-xl-4
+				+contentSection("Highest Value Transactions")
+					.table-responsive
+						table.table.table-striped.table-borderless.mb-0
+							thead
+								tr
+									th.text-card-highlight.text-uppercase.fw-light Transaction
+									th.text-end.text-card-highlight.text-uppercase.fw-light Output Value
+
+							tbody(id="tbody-top-value-tx")
+								tr.row-prototype(style="display: none;")
+									td.data-tx-link
+									td.text-end.data-tx-value
+
+								tr.hidden-row-to-fix-striping.d-none
+
+			.col-xl-4
+				+contentSection("Largest Transactions")
+					.table-responsive
+						table.table.table-striped.table-borderless.mb-0
+							thead
+								tr
+									th.text-card-highlight.text-uppercase.fw-light Transaction
+									th.text-end.text-card-highlight.fw-light
+										span.text-uppercase Size
+										small.ms-2 (vB)
+
+							tbody(id="tbody-top-size-tx")
+								tr.row-prototype(style="display: none;")
+									td.data-tx-link
+									td.text-end.data-tx-value
+
+								tr.hidden-row-to-fix-striping.d-none
+
+			.col-xl-4
+				+contentSection("Highest Days Destroyed Transactions")
+					.table-responsive
+						table.table.table-striped.table-borderless.mb-0
+							thead
+								tr
+									th.text-card-highlight.text-uppercase.fw-light Transaction
+									th.text-end.text-card-highlight.fw-light
+										span.text-uppercase BTC Days Destroyed
+										small.border-bottom.ms-2(title="Bitcoin Days", data-bs-toggle="tooltip") (bd)
+
+							tbody(id="tbody-top-daysdestroyed-tx")
+								tr.row-prototype(style="display: none;")
+									td.data-tx-link
+									td.text-end.data-tx-value
+
+								tr.hidden-row-to-fix-striping.d-none
+
+
+			if (global.txindexAvailable)
+				.col-xl-6
+					+contentSection("Highest Fee Transactions")
+						.table-responsive
+							table.table.table-striped.table-borderless.mb-0
+								thead
+									tr
+										th.text-card-highlight.text-uppercase.fw-light Transaction
+										th.text-end.text-card-highlight.text-uppercase.fw-light Fee
+
+								tbody(id="tbody-top-fee-tx")
+									tr.row-prototype(style="display: none;")
+										td.data-tx-link
+										td.text-end.data-tx-value
+
+									tr.hidden-row-to-fix-striping.d-none
+
+
+				.col-xl-6
+					+contentSection("Highest Fee Rate Transactions")
+						.table-responsive
+							table.table.table-striped.table-borderless.mb-0
+								thead
+									tr
+										th.text-card-highlight.text-uppercase.fw-light Transaction
+										th.text-end.text-card-highlight.fw-light
+											span.text-uppercase Fee Rate
+											small.ms-2 (sat/vB)
+
+								tbody(id="tbody-top-fee-rate-tx")
+									tr.row-prototype(style="display: none;")
+										td.data-tx-link
+										td.text-end.data-tx-value
+
+									tr.hidden-row-to-fix-striping.d-none
+
+
+			if (global.txindexAvailable)
+				.col-lg-6.mb-3
+					+sectionTitle("Input Types")
+					.card.shadow-sm
+						div.card-body
+							span#no-input-types-data.text-muted(style="display: none;") No data
+							table.table.table-striped.table-borderless.mb-0
+								tbody(id="tbody-input-types")
+									tr.row-prototype(style="display: none;")
+										td
+											+darkBadge
+												span.data-type
+
+										td.data-count
+
+									tr.hidden-row-to-fix-striping.d-none
+								
+			.col-lg-6.mb-3(class=(!global.txindexAvailable ? "col-lg-12" : ""))
+				+sectionTitle("Output Types")
+				.card.shadow-sm
+					.card-body
+						table.table.table-striped.table-borderless.mb-0
+							tbody(id="tbody-output-types")
+								tr.row-prototype(style="display: none;")
+									td
+										+darkBadge
+											span.data-type
+
+									td.data-count
+
+								tr.hidden-row-to-fix-striping.d-none
+
+		.row
+			.col-lg-6
+				+contentSection("Transaction Value")
+					canvas(id="graph-tx-value")
+
+						
+
+			.col-lg-6
+				+contentSection("Transaction Value Distribution")
+					canvas(id="chart-tx-value-distribution")
+						
+
+			if (global.txindexAvailable)
+				.col-lg-6
+					+contentSection("Transaction Fee")
+						canvas(id="graph-tx-fee")
+
+							
+
+				.col-lg-6
+					+contentSection("Transaction Fee Distribution")
+						canvas(id="chart-tx-fee-distribution")
+
+							
+
+				.col-lg-6
+					+contentSection("Transaction Fee Rate")
+						canvas(id="graph-tx-fee-rate")
+					
+
+							
+
+				.col-lg-6
+					+contentSection("Transaction Fee Rate Distribution")
+						canvas(id="chart-tx-fee-rate-distribution")
+
+							
+
+			.col-lg-6
+				+contentSection("Transaction Size")
+					canvas(id="graph-tx-size")
+
+						
+
+			.col-lg-6
+				+contentSection("Transaction Size Distribution")
+					canvas(id="chart-tx-size-distribution")
+
+						
+
+			.col-lg-6
+				+contentSection("Transaction Input Count")
+					canvas(id="graph-tx-inputs")
+
+
+			.col-lg-6
+				+contentSection("Transaction Output Count")
+					canvas(id="graph-tx-outputs")
+
+			
+
+block endOfBody
+	- var txidChunkSize = 10;
+
+	+graphPageScriptSetup
+	
+
+	
+	script.
+		var txidChunkSize = !{txidChunkSize};
+		var prunedBlock = !{(block && (!block.tx || block.tx.length == 0) && global.prunedBlockchain)};
+		var txindexAvailable = !{global.txindexAvailable};
+		var txidChunks = !{JSON.stringify(utils.splitArrayIntoChunks(result.getblock.tx, txidChunkSize))};
+		var blockHeight = !{result.getblock.height};
+		var blockHash = "!{result.getblock.hash}";
+		var satsMultiplier = !{coinConfig.baseCurrencyUnit.multiplier};
+		var vByteSizes = false;
+		
+		$(document).ready(function() {
+			if (!prunedBlock) {
+				loadTransactions(txidChunks, txidChunkSize, txidChunks.length * txidChunkSize);
+			}
+		});
+
+		function loadTransactions(txidChunks, chunkSize, count) {
+			var chunkStrs = [];
+			
+			for (var i = 0; i < txidChunks.length; i++) {
+				var txidChunk = txidChunks[i];
+
+				var chunkStr = "";
+
+				for (var j = 0; j < txidChunk.length; j++) {
+					if (j > 0) {
+						chunkStr += ",";
+					}
+
+					chunkStr += txidChunk[j];
+				}
+
+				chunkStrs.push(chunkStr);
+			}
+
+			//alert(JSON.stringify(chunks));
+
+			var results = [];
+
+			var statusCallback = function(chunkIndexDone, chunkCount) {
+				//console.log("Done: " + Math.min(((chunkIndexDone + 1) * chunkSize), count) + " of " + count);
+
+				var wPercent = `${parseInt(100 * (chunkIndexDone + 1) / parseFloat(chunkCount))}%`;
+				
+				$("#data-progress").css("width", wPercent);
+				$("#progress-text").text(`${Math.min(((chunkIndexDone + 1) * chunkSize), count).toLocaleString()} of ${count.toLocaleString()} (${wPercent})`);
+			};
+
+			var finishedCallback = function() {
+				var summary = summarizeData(results);
+
+				fillTopValueTxTable(summary);
+				fillTopDaysDestroyedTxTable(summary);
+				fillTopSizeTxTable(summary);
+
+				if (txindexAvailable) {
+					fillTopFeeTxTable(summary);
+					fillTopFeeRateTxTable(summary);
+				}
+
+				fillInputOutputTypesTable(summary);
+
+				createGraph("graph-tx-value", summary.txValueGraphData, "Value");
+				createGraph("graph-tx-inputs", summary.txInputCountGraphData, "Input Count");
+				createGraph("graph-tx-outputs", summary.txOutputCountGraphData, "Output Count");
+				createGraph("graph-tx-size", summary.txSizeGraphData, "Size");
+
+				createChart("chart-tx-value-distribution", summary.valueDistribution, summary.valueDistributionLabels);
+				createChart("chart-tx-size-distribution", summary.sizeDistribution, summary.sizeDistributionLabels);
+
+				if (txindexAvailable) {
+					createGraph("graph-tx-fee", summary.txFeeGraphData, "Fee");
+					createGraph("graph-tx-fee-rate", summary.txFeeRateGraphData, "Fee");
+
+					createChart("chart-tx-fee-distribution", summary.feeDistribution, summary.feeDistributionLabels);
+					createChart("chart-tx-fee-rate-distribution", summary.feeRateDistribution, summary.feeRateDistributionLabels);
+				}
+
+				//$(".abc").text(JSON.stringify(summary));
+
+				$("#main-content").show();
+				$("#progress-wrapper").hide();
+			};
+
+			getTxData(results, chunkStrs, 0, statusCallback, finishedCallback);
+		}
+
+		function fillTopValueTxTable(data) {
+			var count = Math.min(10, data.topValueTxs.length);
+			
+			for (var i = 0; i < count; i++) {
+				var item = data.topValueTxs[i];
+
+				var row = $("#tbody-top-value-tx .row-prototype").clone();
+
+				row.removeClass("row-prototype");
+
+				row.find(".data-tx-link").html(`<a href='./tx/${item.txid}'>${item.txid.substring(0, 12)}…</a>`);
+				row.find(".data-tx-value").text(item.value);
+				
+				updateCurrencyValue(row.find(".data-tx-value"), item.value);
+
+				row.show();
+
+				$("#tbody-top-value-tx").append(row);
+			}
+		}
+
+		function fillTopDaysDestroyedTxTable(data) {
+			var count = Math.min(10, data.topDaysDestroyedTxs.length);
+			
+			for (var i = 0; i < count; i++) {
+				var item = data.topDaysDestroyedTxs[i];
+
+				var row = $("#tbody-top-daysdestroyed-tx .row-prototype").clone();
+
+				row.removeClass("row-prototype");
+
+				row.find(".data-tx-link").html(`<a href='./tx/${item.txid}'>${item.txid.substring(0, 12)}…</a>`);
+				row.find(".data-tx-value").text(item.displayValue);
+				
+				row.show();
+
+				$("#tbody-top-daysdestroyed-tx").append(row);
+			}
+		}
+
+		function fillTopFeeTxTable(data) {
+			var count = Math.min(10, data.topFeeTxs.length);
+			
+			for (var i = 0; i < count; i++) {
+				var item = data.topFeeTxs[i];
+
+				var row = $("#tbody-top-fee-tx .row-prototype").clone();
+
+				row.removeClass("row-prototype");
+
+				row.find(".data-tx-link").html(`<a href='./tx/${item.txid}'>${item.txid.substring(0, 12)}…</a>`);
+				row.find(".data-tx-value").text(item.value);
+				
+				updateCurrencyValue(row.find(".data-tx-value"), item.value);
+
+				row.show();
+
+				$("#tbody-top-fee-tx").append(row);
+			}
+		}
+
+		function fillTopFeeRateTxTable(data) {
+			var count = Math.min(10, data.topFeeRateTxs.length);
+			
+			for (var i = 0; i < count; i++) {
+				var item = data.topFeeRateTxs[i];
+
+				var row = $("#tbody-top-fee-rate-tx .row-prototype").clone();
+
+				row.removeClass("row-prototype");
+
+				row.find(".data-tx-link").html(`<a href='./tx/${item.txid}'>${item.txid.substring(0, 12)}…</a>`);
+				row.find(".data-tx-value").html(`<span>${parseInt(item.value).toLocaleString()}</span>`);
+				
+				row.show();
+
+				$("#tbody-top-fee-rate-tx").append(row);
+			}
+		}
+
+		function fillTopSizeTxTable(data) {
+			var count = Math.min(10, data.topSizeTxs.length);
+			
+			for (var i = 0; i < count; i++) {
+				var item = data.topSizeTxs[i];
+
+				var row = $("#tbody-top-size-tx .row-prototype").clone();
+
+				row.removeClass("row-prototype");
+
+				row.find(".data-tx-link").html(`<a href='./tx/${item.txid}'>${item.txid.substring(0, 12)}…</a>`);
+				row.find(".data-tx-value").html(`<span>${parseInt(item.value).toLocaleString()}</span>`);
+
+				row.show();
+
+				$("#tbody-top-size-tx").append(row);
+			}
+		}
+
+		function fillInputOutputTypesTable(data) {
+			var sortedInputs = [];
+			for (var key in data.inputTypeCounts) {
+				if (data.inputTypeCounts.hasOwnProperty(key)) {
+					sortedInputs.push({type:key, count:data.inputTypeCounts[key]});
+				}
+			}
+
+			var sortedOutputs = [];
+			for (var key in data.outputTypeCounts) {
+				if (data.outputTypeCounts.hasOwnProperty(key)) {
+					sortedOutputs.push({type:key, count:data.outputTypeCounts[key]});
+				}
+			}
+
+			sortedInputs.sort(function(a, b) {
+				return b.count - a.count;
+			});
+
+			sortedOutputs.sort(function(a, b) {
+				return b.count - a.count;
+			});
+
+			if (sortedInputs.length == 0) {
+				$("#no-input-types-data").show();
+			}
+
+			for (var i = 0; i < sortedInputs.length; i++) {
+				var item = sortedInputs[i];
+
+				var row = $("#tbody-input-types .row-prototype").clone();
+
+				row.removeClass("row-prototype");
+
+				if (i == 0) {
+					row.addClass("table-borderless");
+				}
+				
+				// span(title=`Output Type: ${utils.outputTypeName(inputTypeKey)}`, data-bs-toggle="tooltip") #{utils.outputTypeAbbreviation(inputTypeKey)}
+				row.find(".data-type").html(`<span title='Type: ${item.type}' data-bs-toggle='tooltip'>${item.type}</span>`);
+				row.find(".data-count").text(item.count.toLocaleString());
+
+				row.show();
+
+				$("#tbody-input-types").append(row);
+			}
+
+			for (var i = 0; i < sortedOutputs.length; i++) {
+				var item = sortedOutputs[i];
+
+				var row = $("#tbody-output-types .row-prototype").clone();
+
+				row.removeClass("row-prototype");
+
+				if (i == 0) {
+					row.addClass("table-borderless");
+				}
+				
+				// span(title=`Output Type: ${utils.outputTypeName(inputTypeKey)}`, data-bs-toggle="tooltip") #{utils.outputTypeAbbreviation(inputTypeKey)}
+				row.find(".data-type").html(`<span title='Type: ${item.type}' data-bs-toggle='tooltip'>${item.type}</span>`);
+				row.find(".data-count").text(item.count.toLocaleString());
+
+				row.show();
+
+				$("#tbody-output-types").append(row);
+			}
+		}
+
+		function createGraph(graphId, data, yLabelStr) {
+			var ctx = document.getElementById(graphId).getContext('2d');
+			var graph = new Chart(ctx, {
+				type: 'line',
+				data: {
+					datasets: [{
+						borderColor: '#007bff',
+						borderWidth: 2,
+						backgroundColor: 'rgba(0,0,0,0)',
+						data: data,
+						pointRadius: 0,
+						borderJoinStyle: "round"
+					}]
+				},
+				options: {
+					interaction: {
+						intersect: false,
+						mode: 'index',
+					},
+					plugins: {
+						legend: { display: false },
+					},
+					scales: {
+						x: {
+							type: 'linear',
+							position: 'bottom',
+							scaleLabel: {
+								display: true,
+								labelString: 'Index in Block'
+							},
+							grid: {
+								color: gridLineColor
+							},
+							//ticks: {
+							//	stepSize: 100,
+							//}
+						},
+						y: {
+							type: "logarithmic",
+							scaleLabel: {
+								display: true,
+								labelString: yLabelStr,
+							},
+							grid: {
+								color: gridLineColor
+							},
+						}
+					}
+				}
+			});
+		}
+
+		function createChart(chartId, data, labels) {
+			var bgColors = [];
+
+			for (var i = 0; i < labels.length; i++) {
+				bgColors.push(`hsl(${(333 * i / labels.length)}, 100%, 50%)`);
+			}
+
+			var ctx1 = document.getElementById(chartId).getContext('2d');
+			var chart = new Chart(ctx1, {
+				type: 'bar',
+				data: {
+					labels: labels,
+					datasets: [{
+						data: data,
+						backgroundColor: bgColors
+					}]
+				},
+				options: {
+					plugins: {
+						legend: {
+							display: false
+						},
+					},
+					scales: {
+						x: {
+							grid: {
+								color: gridLineColor
+							},
+						},
+						y: {
+							type: "logarithmic",
+							ticks: {
+								beginAtZero:true
+							},
+							grid: {
+								color: gridLineColor
+							},
+						}
+					}
+				}
+			});
+		}
+
+		function getTxData(results, chunks, chunkIndex, statusCallback, finishedCallback) {
+			if (chunkIndex > chunks.length - 1) {
+				finishedCallback();
+
+				return;
+			}
+
+			var url = `./internal-api/block-tx-summaries/${blockHash}/${blockHeight}/${chunks[chunkIndex]}`;
+			
+			//console.log(url);
+
+			$.ajax({
+				url: url
+
+			}).done(function(result) {
+				for (var i = 0; i < result.length; i++) {
+					results.push(result[i]);
+				}
+
+				statusCallback(chunkIndex, chunks.length);
+				
+				getTxData(results, chunks, chunkIndex + 1, statusCallback, finishedCallback);
+			});
+		}
+
+		function summarizeData(txResults) {
+			var analysis = {};
+
+			analysis.inputTypeCounts = {};
+			analysis.outputTypeCounts = {};
+			
+			analysis.txValues = [];
+			analysis.txValueGraphData = [];
+
+			analysis.txDaysDestroyed = [];
+			analysis.txDaysDestroyedGraphData = [];
+			
+			analysis.txFees = [];
+			analysis.txFeeGraphData = [];
+
+			analysis.txFeeRates = [];
+			analysis.txFeeRateGraphData = [];
+
+			analysis.txSizes = [];
+			analysis.txSizeGraphData = [];
+			analysis.txInputCountGraphData = [];
+			analysis.txOutputCountGraphData = [];
+
+			for (var i = 0; i < txResults.length; i++) {
+				var txSummary = txResults[i];
+
+				//console.log(JSON.stringify(txSummary));
+				
+				for (var j = 0; j < txSummary.vout.length; j++) {
+					var vout = txSummary.vout[j];
+					var outputType = vout.type;
+					
+					if (!analysis.outputTypeCounts[outputType]) {
+						analysis.outputTypeCounts[outputType] = 0;
+					}
+
+					analysis.outputTypeCounts[outputType]++;
+				}
+
+				if (txSummary.vsize) {
+					vByteSizes = true;
+				}
+
+				analysis.txValues.push({txid:txSummary.txid, value:new Decimal(txSummary.totalOutput)});
+				analysis.txValueGraphData.push({x:i, y:new Decimal(txSummary.totalOutput).toNumber()});
+
+				analysis.txDaysDestroyed.push({txid:txSummary.txid, value:new Decimal(txSummary.totalDaysDestroyed), displayValue:new Decimal(txSummary.totalDaysDestroyed).toDP(1)});
+				analysis.txDaysDestroyedGraphData.push({x:i, y:new Decimal(txSummary.totalDaysDestroyed).toNumber()});
+				
+				analysis.txFees.push({txid:txSummary.txid, value:new Decimal(txSummary.totalFee)});
+				analysis.txFeeGraphData.push({x:i, y:new Decimal(txSummary.totalFee).toNumber()});
+
+				var feeRate = new Decimal(txSummary.totalFee).times(satsMultiplier).dividedBy(txSummary.vsize ? txSummary.vsize : txSummary.size);
+				analysis.txFeeRates.push({txid:txSummary.txid, value:feeRate});
+				analysis.txFeeRateGraphData.push({x:i, y:parseInt(feeRate.toNumber())});
+
+				analysis.txSizes.push({txid:txSummary.txid, value:new Decimal(txSummary.vsize ? txSummary.vsize : txSummary.size)});
+				analysis.txSizeGraphData.push({x:i, y:(txSummary.vsize ? txSummary.vsize : txSummary.size)});
+
+				analysis.txInputCountGraphData.push({x:i, y:txSummary.vin.length});
+				analysis.txOutputCountGraphData.push({x:i, y:txSummary.vout.length});
+
+				if (!txSummary.coinbase) {
+					for (var j = 0; j < txSummary.vin.length; j++) {
+						var vin = txSummary.vin[j];
+						
+						var inputType = vin.type;
+						
+						if (!analysis.inputTypeCounts[inputType]) {
+							analysis.inputTypeCounts[inputType] = 0;
+						}
+
+						analysis.inputTypeCounts[inputType]++;
+					}
+				}
+			}
+
+			analysis.txValues.sort(function(a, b) {
+				return b.value.cmp(a.value);
+			});
+
+			analysis.txDaysDestroyed.sort(function(a, b) {
+				return b.value.cmp(a.value);
+			});
+
+			analysis.txFees.sort(function(a, b) {
+				return b.value.cmp(a.value);
+			});
+
+			analysis.txFeeRates.sort(function(a, b) {
+				return b.value.cmp(a.value);
+			});
+
+			analysis.txSizes.sort(function(a, b) {
+				return b.value.cmp(a.value);
+			});
+
+			analysis.topValueTxs = analysis.txValues.slice(0, Math.min(100, analysis.txValues.length));
+			analysis.topDaysDestroyedTxs = analysis.txDaysDestroyed.slice(0, Math.min(100, analysis.txDaysDestroyed.length));
+			analysis.topFeeTxs = analysis.txFees.slice(0, Math.min(100, analysis.txFees.length));
+			analysis.topFeeRateTxs = analysis.txFeeRates.slice(0, Math.min(100, analysis.txFeeRates.length));
+			analysis.topSizeTxs = analysis.txSizes.slice(0, Math.min(100, analysis.txSizes.length));
+
+			var topValue = new Decimal(analysis.txValues[parseInt(analysis.txValues.length * 0.1)].value).times(satsMultiplier);
+			var topDaysDestroyed = new Decimal(analysis.txDaysDestroyed[parseInt(analysis.txDaysDestroyed.length * 0.1)].value);
+			var topFee = new Decimal(analysis.txFees[parseInt(analysis.txFees.length * 0.1)].value).times(satsMultiplier);
+			var topFeeRate = new Decimal(analysis.txFeeRates[parseInt(analysis.txFees.length * 0.1)].value);
+			var topSize = new Decimal(analysis.txSizes[parseInt(analysis.txSizes.length * 0.1)].value);
+
+			var topValueSats = parseInt(topValue);
+			var topFeeSats = parseInt(topFee);
+			var topFeeRateInt = parseInt(topFeeRate);
+
+			var distributionBucketCount = 75;
+			
+			analysis.valueDistribution = [];
+			analysis.valueDistributionLabels = [];
+
+			analysis.feeDistribution = [];
+			analysis.feeDistributionLabels = [];
+
+			analysis.feeRateDistribution = [];
+			analysis.feeRateDistributionLabels = [];
+
+			analysis.sizeDistribution = [];
+			analysis.sizeDistributionLabels = [];
+
+			for (var i = 0; i < distributionBucketCount; i++) {
+				analysis.valueDistribution.push(0);
+				analysis.valueDistributionLabels.push(`[${new Decimal(i * topValueSats / distributionBucketCount).dividedBy(satsMultiplier).toDP(3)} - ${new Decimal((i + 1) * topValueSats / distributionBucketCount).dividedBy(satsMultiplier).toDP(3)})`);
+
+				analysis.feeDistribution.push(0);
+				analysis.feeDistributionLabels.push(`[${new Decimal(i * topFeeSats / distributionBucketCount).toDP(0)} - ${new Decimal((i + 1) * topFeeSats / distributionBucketCount).toDP(0)})`);
+
+				analysis.feeRateDistribution.push(0);
+				analysis.feeRateDistributionLabels.push(`[${new Decimal(i * topFeeRate / distributionBucketCount).toDP(0)} - ${new Decimal((i + 1) * topFeeRate / distributionBucketCount).toDP(0)})`);
+
+				analysis.sizeDistribution.push(0);
+				analysis.sizeDistributionLabels.push(`[${new Decimal(i * topSize / distributionBucketCount).toDP(0)} - ${new Decimal((i + 1) * topSize / distributionBucketCount).toDP(0)})`);
+			}
+
+			analysis.valueDistributionLabels[distributionBucketCount - 1] = `${new Decimal(topValueSats).dividedBy(satsMultiplier).toDP(3)}+`;
+			analysis.feeDistributionLabels[distributionBucketCount - 1] = `${topFeeSats}+`;
+			analysis.feeRateDistributionLabels[distributionBucketCount - 1] = `${topFeeRateInt}+`;
+			analysis.sizeDistributionLabels[distributionBucketCount - 1] = `${topSize}+`;
+
+			for (var i = 0; i < txResults.length; i++) {
+				var txSummary = txResults[i];
+
+				var valueSats = new Decimal(txSummary.totalOutput).times(satsMultiplier);
+				var feeSats = new Decimal(txSummary.totalFee).times(satsMultiplier);
+				var feeRate = new Decimal(txSummary.totalFee).times(satsMultiplier).dividedBy(txSummary.vsize ? txSummary.vsize : txSummary.size);
+				var size = new Decimal(txSummary.vsize ? txSummary.vsize : txSummary.size);
+
+				var valueBucket = parseInt(distributionBucketCount * valueSats / topValueSats);
+				if (valueBucket >= distributionBucketCount) {
+					valueBucket = distributionBucketCount - 1;
+				}
+
+				var feeBucket = parseInt(distributionBucketCount * feeSats / topFeeSats);
+				if (feeBucket >= distributionBucketCount) {
+					feeBucket = distributionBucketCount - 1;
+				}
+
+				var feeRateBucket = parseInt(distributionBucketCount * feeRate / topFeeRateInt);
+				if (feeRateBucket >= distributionBucketCount) {
+					feeRateBucket = distributionBucketCount - 1;
+				}
+
+				var sizeBucket = parseInt(distributionBucketCount * size / topSize);
+				if (sizeBucket >= distributionBucketCount) {
+					sizeBucket = distributionBucketCount - 1;
+				}
+
+				analysis.valueDistribution[valueBucket]++;
+				analysis.feeDistribution[feeBucket]++;
+				analysis.feeRateDistribution[feeRateBucket]++;
+				analysis.sizeDistribution[sizeBucket]++;
+			}
+
+			return analysis;
+		}
+

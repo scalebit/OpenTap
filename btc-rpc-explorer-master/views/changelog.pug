@@ -1,0 +1,12 @@
+extends layout
+
+block headContent
+	title Changelog
+
+	style.
+
+block content
+	+pageTitle("Changelog / Release Notes")
+
+	+contentSection
+		| !{changelogHtml}

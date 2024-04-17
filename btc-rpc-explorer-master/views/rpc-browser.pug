@@ -1,0 +1,164 @@
+extends layout
+
+block headContent
+	title RPC Browser #{(method ? (" - " + method) : false)}
+
+	style.
+		pre {
+			white-space: pre-wrap;       /* Since CSS 2.1 */
+			word-wrap: break-word;       /* Internet Explorer 5.5+ */
+		}
+
+block content
+	+pageTitle("RPC Browser")
+
+	if (gethelp)
+		div.row
+			div.col-md-9
+				if (methodhelp)
+					.clearfix.mb-4
+						.float-start
+							+sectionTitleBlock
+								span.me-2 Command:
+								a(href=`./rpc-browser?method=${method}`) #{method}
+
+						.float-start.ms-2
+							if (session.favoriteRpcCommands && session.favoriteRpcCommands.includes(method))
+								a.me-2(href=`./session-data?action=remove-rpc-favorite&data=${method}`, title="Remove from Favorites", data-bs-toggle="tooltip")
+									i.bi-star-fill.text-warning
+							else
+								a.me-2(href=`./session-data?action=add-rpc-favorite&data=${method}`, title="Add as a Favorite", data-bs-toggle="tooltip")
+									i.bi-star.text-warning
+
+							span.small.text-muted (
+								a(href=`https://developer.bitcoin.org/reference/rpc/${method}.html`, target="_blank") Developer Docs
+									i.bi-box-arrow-up-right.ms-2
+								| )
+							
+
+					
+					- var tabs = ["Execute", "Help Content"];
+					if (methodhelp.args && methodhelp.args.length > 0)
+						- tabs.push("Argument Details")
+
+					+pageTabs(tabs)
+
+					.tab-content
+						+pageTab("Execute", true)
+
+							if (methodResult)
+								+sectionTitleBlock
+									span.me-2 Result
+									if (executionMillis)
+										small.text-muted (#{executionMillis.toLocaleString()} ms)
+
+								+contentSection
+									pre
+										code.json #{JSON.stringify(methodResult, null, 4)}
+
+
+							+contentSection("Arguments")
+								form(method="get")
+									input(type="hidden", name="_csrf", value=csrfToken)
+									input(type="hidden", name="method", value=method)
+
+									if (false)
+										pre
+											code.json #{JSON.stringify(argValues, null, 4)}
+									
+									div
+										each argX, index in methodhelp.args
+											.mb-3
+												label(for=("arg_" + argX.name))
+													div
+														span.fw-bold #{argX.name}
+														span.me-1 :
+															span  #{argX.properties.join(", ")}
+													if (argX.description)
+														span.text-muted Description: #{argX.description}
+													if (false && argX.detailsLines && argX.detailsLines.length > 0)
+														- var detailsLines = "";
+														each detailsLine in argX.detailsLines
+															- detailsLines = (detailsLines + "<br/>" + detailsLine);
+														i.bi-info-circle(data-bs-toggle="tooltip", title=detailsLines)
+															
+
+
+												- var valX = false;
+												if (argValues != null)
+													if (argValues[index] != null)
+														if (("" + argValues[index]) != "NaN")
+															- valX = JSON.stringify(argValues[index]);
+															if (valX.substring(0, 1) == "\"")
+																- valX = valX.substring(1);
+															if (valX.substring(valX.length - 1, valX.length) == "\"")
+																- valX = valX.substring(0, valX.length - 1);
+
+												if (method == "verifymessage" && argX.name == "message")
+													- var newline = String.fromCharCode(13, 10);
+													textarea.form-control(id=`arg_${argX.name}`, name=`args[${index}]`, placeholder=argX.name, rows="8") #{(valX ? valX.split('\\n').join(newline) : "")}
+													
+												else
+													input.form-control(id=`arg_${argX.name}`, type="text", name=`args[${index}]`, placeholder=argX.name, value=(valX ? valX : ""))
+
+										if (!methodhelp.args || methodhelp.args.length == 0)
+											span.text-muted None
+
+									hr
+
+									input.btn.btn-primary.px-3(type="submit", name="execute", value="Execute")
+
+						+pageTab("Help Content")
+							+contentSection("Help Content")
+								pre(style="white-space: pre;")
+									code.json(data-lang="txt") #{methodhelp.string}
+
+						if (methodhelp.args && methodhelp.args.length > 0)
+							+pageTab("Argument Details")
+								each item in methodhelp.args
+									+contentSection(item.name)
+										pre
+											code.json #{JSON.stringify(item, null, 4)}
+
+					
+							
+
+				else
+
+					+dismissableInfoAlert("rpcBrowserNoteDismissed", "About RPC Browser...")
+						.mb-2 This tool lists all RPC commands that your node makes publicly visible. Clicking on any command in the list will display additional information about that command and provide an interactive tool for submitting the command to your node.
+
+			.col-md-3
+				if (session.favoriteRpcCommands && session.favoriteRpcCommands.length > 0)
+					.clearfix
+						.float-start
+							i.bi-star.me-2
+						.float-start
+							+sectionTitle(`Favorites (${session.favoriteRpcCommands.length.toLocaleString()})`)
+					+contentSection
+						ol.mb-0.ps-4
+							each methodX, methodIndex in session.favoriteRpcCommands
+								li
+									a(href=`./rpc-browser?method=${methodX}`, style=(methodX == method ? "font-weight: bold; font-style: italic;" : false)) #{methodX}
+
+				if (session.recentRpcCommands && session.recentRpcCommands.length > 0)
+					.clearfix
+						.float-start
+							i.bi-clock-history.me-2
+						.float-start
+							+sectionTitle(`Recent (${session.recentRpcCommands.length.toLocaleString()})`)
+					+contentSection
+						ol.mb-0.ps-4
+							each methodX, methodIndex in session.recentRpcCommands
+								li
+									a(href=`./rpc-browser?method=${methodX}`, style=(methodX == method ? "font-weight: bold; font-style: italic;" : false)) #{methodX}
+
+				each section, sectionIndex in gethelp
+					+contentSection(`${section.name} (${section.methods.length})`)
+						ol.mb-0.ps-4
+							each methodX, methodIndex in section.methods
+								li
+									a(href=`./rpc-browser?method=${methodX.name}`, class=(methodX.name == method ? "text-info" : false), style=(methodX.name == method ? "font-weight: bold; font-style: italic;" : false)) #{methodX.name}
+							
+							
+

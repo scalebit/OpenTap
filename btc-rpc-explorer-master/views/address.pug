@@ -1,0 +1,303 @@
+extends layout
+
+block headContent
+	title Address #{address}
+
+block content
+	if (result && result.validateaddress)
+		if (!result.validateaddress.isvalid)
+			div.alert.alert-danger.mb-huge
+				h1.h6.fw-bold Invalid Address
+				span.font-monospace #{address}
+				
+		else
+			.clearfix
+				.float-start
+					+pageTitle("Address", address, true)
+
+				.float-start.float-md-end.mb-3.mb-md-0
+					img(src=addressQrCodeUrl, alt=address, style="border: solid 1px #ccc;")
+
+			
+			if (false)
+				pre
+					code.json #{JSON.stringify(addressObj, null, 4)}
+
+
+			+pageTabs(["Details", "JSON"])
+
+
+			.tab-content
+				+pageTab("Details", true)
+
+					if (payoutAddressForMiner)
+						+funAlert
+							span This looks like a miner payout address for  
+							span.fw-bold #{payoutAddressForMiner.name}
+							if (coinConfig.miningPoolsConfigUrls.length > 1)
+								span  (see the miner-identifications configurations: 
+								each item, index in coinConfig.miningPoolsConfigUrls
+									if (index > 0)
+										span , 
+									a(href=item) config ##{index + 1}
+								span )
+							else
+								span  (see the configuration
+								a(href=coinConfig.miningPoolsConfigUrls[0]) here
+								span )
+								
+
+					else if (global.specialAddresses[address] && global.specialAddresses[address].type == "fun")
+						- var saInfo = global.specialAddresses[address].addressInfo;
+
+						+funAlert(saInfo.alertBodyHtml, saInfo.summary, saInfo.referenceUrl)
+
+
+					.clearfix
+						.float-end
+							if (`${userSettings["addressPageShowTechDetails"]}` == "false")
+								a.btn.btn-primary.btn-sm.me-2(href=`./changeSetting?name=addressPageShowTechDetails&value=true`, title="Display technical details for this address.", data-bs-toggle="tooltip")
+									i.bi-plus-square.me-2
+									| Technical Details
+
+
+					if (false && config.electrumServers && config.electrumServers.length > 0)
+						if (session.hideElectrumTrustWarnings != "true")
+							div.alert.alert-primary.alert-dismissible.clearfix.shadow-sm(role="alert")
+								span  this explorer is database-free, it doesn't natively support address balances and transaction histories. In order to provide this functionality, address balances and transaction history can be requested from a configurable set of Electrum servers. If multiple Electrum servers are configured, the results are cross-referenced and conflicts noted. For the transaction history displayed below, only the transaction identifiers from Electrum are used; the transaction details are requested via RPC from this app's primary node, as usual.
+
+								a.close(href="./changeSetting?name=hideElectrumTrustWarnings&value=true", aria-label="Close", style="text-decoration: none;")
+									span(aria-hidden="true") &times;
+
+
+					- var x = result.validateaddress;
+					- var flags = [];
+					- if (x.ismine) { flags.push(["Mine", "This address is owned by your node."]); }
+					- if (x.iswatchonly) { flags.push(["Watch-Only"]); }
+
+					- var summaryRowItemCount = ((addressEncoding && addressEncoding != "unknown") ? 1 : 0) + (addressDetails ? ((addressDetails.txCount != null ? 1 : 0) + (addressDetails.balanceSat ? 1 : 0) + (addressDetails.unconfirmedBalanceSat ? 1 : 0) + (addressDetails.totalReceivedSat ? 1 : 0)) : 0) + (flags.length > 0 ? 1 : 0);
+					if (summaryRowItemCount > 0)
+						.clearfix
+							.float-start
+								+sectionTitle("Summary")
+							.float-start
+								if (config.addressApi)
+									small.text-muted.border-dotted.ms-2(title=`Some details for this address were queried from ${config.addressApi}` data-bs-toggle="tooltip") Trust Note
+						
+						+contentSection
+							+summaryRow(summaryRowItemCount)
+								if (addressEncoding && addressEncoding != "unknown")
+									+summaryItem("Encoding")
+										| #{addressEncoding}
+
+								if (addressDetails && addressDetails.txCount != null)
+									+summaryItem("Transactions")
+										| #{addressDetails.txCount.toLocaleString()}
+
+								if (addressDetails && addressDetails.balanceSat)
+									+summaryItem("Balance")
+										span(class=(addressDetails.balanceSat > 0 ? "text-success" : false))
+											- var currencyValue = new Decimal(addressDetails.balanceSat).dividedBy(coinConfig.baseCurrencyUnit.multiplier);
+											+valueDisplay(currencyValue)
+
+								if (addressDetails && addressDetails.unconfirmedBalanceSat)
+									+summaryItem("Unconfirmed Balance")
+										span(class=(addressDetails.unconfirmedBalanceSat > 0 ? "text-success" : "text-danger"))
+											if (addressDetails.unconfirmedBalanceSat > 0)
+												span +
+											else
+												span -
+
+											- var currencyValue = new Decimal(Math.abs(addressDetails.unconfirmedBalanceSat)).dividedBy(coinConfig.baseCurrencyUnit.multiplier);
+											+valueDisplay(currencyValue)
+
+								if (addressDetails && addressDetails.totalReceivedSat)
+									+summaryItem("Total Received / Sent")
+										span(class=(addressDetails.totalReceivedSat > 0 ? "text-success" : false))
+											if (addressDetails.totalReceivedSat)
+												span.me-1 +
+
+											- var currencyValue = new Decimal(Math.abs(addressDetails.totalReceivedSat)).dividedBy(coinConfig.baseCurrencyUnit.multiplier);
+											+valueDisplay(currencyValue)
+
+										br
+										span(class=(addressDetails.totalSentSat > 0 ? "text-danger" : false))
+											if (addressDetails.totalSentSat > 0)
+												span.me-1 -
+
+											- var currencyValue = new Decimal(Math.abs(addressDetails.totalSentSat)).dividedBy(coinConfig.baseCurrencyUnit.multiplier);
+											+valueDisplay(currencyValue)
+
+								if (flags.length > 0)
+									+summaryItem("Flags")
+										each flagItem, flagIndex in flags
+											span.badge.bg-primary(class=(flagIndex > 0 ? "ms-1" : false), title=(flagItem.length > 1 ? flagItem[1] : false), data-bs-toggle=(flagItem.length > 1 ? "tooltip" : false)) #{flagItem[0]}
+
+					+contentSection("Technical Details", true, "addressPageShowTechDetails")
+						+summaryRow(1 + ((addressObj && addressObj.hash) ? 1 : 0) + ((addressObj && utils.objHasProperty(addressObj, "version")) ? 1 : 0) + (utils.objHasProperty(result.validateaddress, "witness_version") ? 1 : 0) + (result.validateaddress.witness_program ? 1 : 0) + (electrumScripthash ? 1 : 0))
+							
+							if (addressObj && addressObj.hasOwnProperty("version"))
+								+summaryItem("Version")
+									| #{addressObj.version}
+
+							if (addressObj && addressObj.hash)
+								+summaryItem("Hash 160")
+									| #{utils.ellipsizeMiddle(addressObj.hash, 12)}
+									+copyTextButton(addressObj.hash)
+
+							+summaryItem("Script Pub Key")
+								| #{utils.ellipsizeMiddle(result.validateaddress.scriptPubKey, 12)}
+								+copyTextButton(result.validateaddress.scriptPubKey)
+
+							if (utils.objHasProperty(result.validateaddress, "witness_version"))
+								+summaryItem("Witness Version")
+									| #{result.validateaddress.witness_version}
+
+							if (result.validateaddress.witness_program)
+								+summaryItem("Witness Program")
+									| #{utils.ellipsizeMiddle(result.validateaddress.witness_program, 12)}
+									+copyTextButton(result.validateaddress.witness_program)
+
+							if (electrumScripthash)
+								+summaryItem("Script Hash", "Electrum-lookup script hash")
+									| #{utils.ellipsizeMiddle(electrumScripthash, 12)}
+									+copyTextButton(electrumScripthash)
+
+					
+
+					.clearfix
+						.float-start
+							+sectionTitle(addressDetails && addressDetails.txCount ? `${addressDetails.txCount.toLocaleString()} Transaction${addressDetails.txCount == 1 ? "" : "s"}` : "Transactions")
+						.float-start
+							if (config.addressApi)
+								if (config.addressApi == "electrum" || config.addressApi == "electrumx")
+									small.text-muted.border-dotted.ms-2(title=`The list of transaction IDs for this address was queried from your configured Electrum server(s).` data-bs-toggle="tooltip") Trust Note
+								else
+									small.text-muted.border-dotted.ms-2(title=`The list of transaction IDs for this address was queried from ${config.addressApi}` data-bs-toggle="tooltip") Trust Note
+
+						.float-end
+							if (!crawlerBot && txids && txids.length > 1 && addressApiSupport.sortDesc && addressApiSupport.sortAsc)
+								div.float-end
+									a.pull-right.dropdown-toggle(href="#", data-bs-toggle="dropdown", aria-haspopup="true", aria-expanded="false")
+										if (sort == "desc")
+											span Newest First
+										else
+											span Oldest First
+
+									div.dropdown-menu.dropdown-menu-end
+										a.dropdown-item(href=`./address/${address}`)
+											if (sort == "desc")
+												i.bi-check2 
+											span  Newest First
+										a.dropdown-item(href=`./address/${address}?sort=asc`)
+											if (sort != "desc")
+												i.bi-check2 
+											span  Oldest First
+
+							else if (txids && txids.length > 1 && addressApiSupport.sortDesc && !addressApiSupport.sortAsc)
+								div.float-end
+									span.text-muted Newest First
+
+					+contentSection(null, false, null, true, false)
+						if (conflictedTxidResults)
+							div.alert.alert-warning.pb-0
+								div.float-start(style="width: 55px; height: 50px; font-size: 18px;")
+									i.bi-exclamation-triangle(style="margin-top: 10px;")
+								h4.alert-heading.h6.fw-bold Trust Warning
+								p
+									span The transaction history for this address was requested from mulitple Electrum servers and the results did not match. The results below were obtained only from 
+									span.fw-bold #{electrumHistory.server}
+
+
+						if (true)
+							if (addressApiError && addressApiError.error && addressApiError.error.code && addressApiError.error.code == -32600)
+								span Failed to retrieve transaction history from Electrum. See 
+								a(href="https://github.com/janoside/btc-rpc-explorer/issues/67") Issue #67
+								span  for more information.
+
+
+							else if (addressApiError && addressApiError.userText)
+								+contentSection
+									div.text-danger Error: #{addressApiError.userText}
+
+							else if (addressDetailsErrors && addressDetailsErrors.length > 0)
+								+contentSection
+									each err, errIndex in addressDetailsErrors
+										- let errorMsg = "";
+										if (err.e && err.e.message)
+											- errorMsg = err.e.message;
+											
+										if (errorMsg == "history too large")
+											span Failed to retrieve transaction history from ElectrumX because this address is involved in too many transactions (more than ElectrumX currently supports retrieving). See 
+											a(href="https://github.com/janoside/btc-rpc-explorer/issues/67") Issue #67
+											span  for more information.
+
+										else if (errorMsg == "failed to get confirmed status") 
+											span Failed to retrieve transaction history from Electrum Rust Server (electrs). See&nbsp;
+											a(href="https://github.com/janoside/btc-rpc-explorer/issues/67") Issue #67
+											span  for more information.
+											.mt-2
+												| As a workaround, consider starting electrs with a custom&nbsp;
+												span.font-plaintext --txid-limit
+												span  argument, to support longer transaction histories.
+											
+
+										else if (errorMsg.endsWith("index entries, query may take too long"))
+											span Failed to retrieve transaction history from Electrum Rust Server (electrs). 
+												| Consider starting electrs with a custom 
+												span.font-plaintext --index-lookup-limit
+												span  argument, to support longer transaction histories.
+
+										else if (err == "No address API configured")
+											.mb-2 No address API is configured.
+											.mb-0 See 
+												| <a href="https://github.com/janoside/btc-rpc-explorer/blob/master/.env-sample">the example configuration file</a>
+												|  for help setting up an address API.
+
+										else
+											span.text-danger Error retrieving transaction history (##{errIndex + 1})
+											pre
+												code.json #{JSON.stringify(err, null, 4)}
+
+							else if (!global.txindexAvailable && transactions.length == 0)
+								+contentSection
+									table.table.table-striped
+										each txid, txidIndex in txids
+											tr
+												td.text-end
+													small.text-muted #{(txidIndex + offset + 1).toLocaleString()}
+												td
+													- var blockHeight = addressDetails.blockHeightsByTxid[txid];
+													- var blockHeightParam = blockHeight > 0 ? `@${blockHeight}` : "";
+													a(href=`./tx/${txid}${blockHeightParam}`) #{txid}
+
+							else if (transactions.length == 0)
+								+contentSection
+									span No transactions found
+
+							else
+								- var txIOHighlightAddress = address;
+								- var options = {currentBlockHeight: getblockchaininfo.blocks, blockHeightsByTxid: blockHeightsByTxid, showDates: true, showConfirmations: true, highlightAddress: address, addrGainsByTxid: addrGainsByTx, addrLossesByTxid: addrLossesByTx, hidePagination:crawlerBot};
+								+txList(transactions, addressDetails.txCount, limit, offset, txInputsByTransaction, options)
+
+							
+							
+				
+
+				+pageTab("JSON")
+					+contentSection("validateaddress")
+						pre
+							code.json #{JSON.stringify(result.validateaddress, null, 4)}
+
+					if (addressDetails)
+						+contentSection("addressDetails")
+							pre
+								code.json #{JSON.stringify(addressDetails, null, 4)}
+
+					if (addressObj)
+						+contentSection("addressObj")
+							pre
+								code.json #{JSON.stringify(addressObj, null, 4)}
+									
+
+		

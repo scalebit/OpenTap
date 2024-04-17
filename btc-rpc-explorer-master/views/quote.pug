@@ -1,0 +1,14 @@
+extends layout
+
+block headContent
+	title #{coinConfig.name} Quote ##{quoteIndex}
+
+block content
+	.d-flex.justify-content-between.mb-3
+		+pageTitle(`${coinConfig.name} Quote #${quoteIndex}`)
+
+		.text-end
+			a(href=`./quotes`) All Quotes
+
+	.pt-9
+		+quote(btcQuotes[quoteIndex], -1, {fontSize: 1})

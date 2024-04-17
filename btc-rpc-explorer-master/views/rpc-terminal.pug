@@ -1,0 +1,67 @@
+extends layout
+
+block headContent
+	title RPC Terminal
+
+block content
+	+pageTitle("RPC Terminal")
+
+
+	if (!config.demoSite && (!config.credentials.rpc || !config.credentials.rpc.rpc))
+		.mb-2
+			a.btn.btn-secondary(href="./disconnect") Disconnect from node
+
+
+	+dismissableInfoAlert("rpcTermPageNoteDismissed", "About RPC Terminal...")
+		.mb-2 This tool lets you send custom RPC commands to your node and will display the results below.
+		.mb-2 To browse all available RPC commands you can use the <a href="./rpc-browser">RPC Browser</a>.
+		
+
+	div.card.shadow-sm.mb-3
+		div.card-body
+			form(id="terminal-form")
+				.mb-3
+					label(for="input-cmd") Command
+					input.form-control(type="text", id="input-cmd", name="cmd")
+
+				input.btn.btn-primary.w-100(type="submit", value="Send")
+
+	hr
+	
+	div(id="terminal-output")
+
+block endOfBody
+	script.
+		var csrfToken = $('meta[name=csrf-token]').attr('content');
+
+		$(document).ready(function() {
+			$("#terminal-form").submit(function(e) {
+				e.preventDefault();
+
+				var cmd = $("#input-cmd").val()
+
+				var postData = {};
+				postData.cmd = cmd;
+				postData._csrf = csrfToken;
+				
+				$.post(
+					"./rpc-terminal",
+					postData,
+					function(response, textStatus, jqXHR) {
+						var t = new Date().getTime();
+
+						$("#terminal-output").prepend("<div id='output-" + t + "' class='card mb-3 shadow-sm'><div class='card-body'><h5>" + cmd + "</h5><pre><code class='json'>" + response + "</code></pre></div></div>");
+						console.log(response);
+
+						$("#output-" + t + " pre code").each(function(i, block) {
+							hljs.highlightBlock(block);
+						});
+						
+						return false;
+					})
+					.done(function(data) {
+					});
+
+				return false;
+			});
+		});

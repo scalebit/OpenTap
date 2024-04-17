@@ -1,0 +1,99 @@
+$body-bg: #fff;
+$body-color: #212529;
+
+$main-bg: #f0f4f7;
+
+$border-color: #e4e7eb;
+$card-border-color: $border-color;
+$card-highlight-color: #567997;
+
+
+
+$alert-bg-scale: -70%;
+$alert-border-scale: -60%;
+
+$bg-nav-link-hover: darken($body-bg, 10%);
+
+
+
+
+$table-striped-bg: rgba(0, 0, 0, 0.04);
+
+
+$nav-tabs-border-color: lighten($body-color, 45%);
+
+
+@import "./main";
+
+
+
+
+
+.bg-main {
+	background-color: $main-bg !important;
+}
+
+.bg-darken {
+	background-color: darken($body-bg, 6%) !important;
+}
+
+.bg-header-footer {
+	background-color: #212529 !important;
+}
+
+.bg-header-footer-highlight {
+	background-color: lighten(#212529, 15%) !important;
+}
+
+.bg-header-footer {
+	background-color: #162740 !important;
+}
+
+.bg-header-footer-highlight {
+	background-color: lighten(#162740, 15%) !important;
+}
+
+.bg-gradient-body-to-main {
+	background: linear-gradient(0deg, $main-bg 0%, $body-bg 100%);
+}
+
+.bg-card-highlight-badge {
+	background-color: darken($card-bg, 10%) !important;
+}
+
+.bg-tx-separator {
+	background-color: darken($body-bg, 30%);
+}
+
+.border-card-highlight-badge {
+	border-color: darken($card-bg, 16%) !important;
+}
+
+.text-card-highlight {
+	color: $card-highlight-color !important;
+}
+
+.border-dotted {
+	border-bottom: dotted 1px #979ca5;
+}
+
+.card-highlight {
+	background-color: darken($card-bg, 3%);
+	border: solid 1px darken($card-bg, 10%) !important;
+	color: $body-color;
+}
+
+
+
+.bs-callout-danger {
+	background-color: #f8d7da;
+	border-color: #f1aeb5;
+}
+.bs-callout-warning {
+	background-color: #fff3cd;
+	border-color: #ffe69c;
+}
+.bs-callout-info {
+	background-color: #cff4fc;
+	border-color: #9eeaf9;
+}

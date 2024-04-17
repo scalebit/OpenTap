@@ -1,0 +1,353 @@
+extends layout
+
+block headContent
+	title Mining Summary
+
+block content
+	+pageTitle("Mining Summary")
+
+
+	+dismissableInfoAlert("miningSummaryPageNoteDismissed", "About Mining Summary...")
+		| !{markdown("The **Mining Summary** tool queries a range of blocks from Bitcoin Core and tries to identify the miner for each block. The identification of a mining entity is an imperfect process, relying on optional flagging by anonymous entities (though, in practice, it tends to work well).")}
+		| Use the <b>Filters</b> section below to select the range of blocks to analyze.
+
+
+	+contentSection("Filters")
+		+blockRangeFilters
+
+
+	div#progress-wrapper
+		div.card.shadow-sm.mb-3
+			div.card-body
+				.d-flex.align-items-center
+					.spinner-border.spinner-border-sm.text-primary.me-2.ms-2
+					span.fw-bold.me-2 Loading:
+					span.fw-light(id="progress-text") ...
+				
+				div.progress.mt-2(id="progress-bar", style="height: 7px;")
+					div.progress-bar(id="data-progress", role="progressbar", aria-valuenow="0", aria-valuemin="0" ,aria-valuemax="100")
+	
+
+	div#summary-table
+		.row
+			.col-lg-6
+				+contentSection("Revenue Breakdown")
+					canvas(id="revenue-breakdown-chart")
+
+			.col-lg-6
+				+contentSection("Data")
+					.table-responsive
+						table.table.table-borderless.table-striped.mb-0
+							thead
+								tr
+									th.text-card-highlight.text-uppercase.fw-light Miner
+									th.text-end.text-card-highlight.text-uppercase.fw-light Blocks
+									th.text-end.text-card-highlight.text-uppercase.fw-light
+										span.border-dotted(title="Σ (Subsidy + Fees)", data-bs-toggle="tooltip") Revenue
+									th.text-end.text-card-highlight.text-uppercase.fw-light
+										span.border-dotted(title="Percent of total subsidy plus fees", data-bs-toggle="tooltip") % Revenue
+									
+							tbody(id="summary-table-body")
+								tr(id="miner-summary-prototype", style="display: none;")
+									td
+										span.badge.bg-primary.miner-name
+										span.badge.bg-secondary.miner-name-unknown
+									
+									td.text-end
+										span.miner-block-count
+									
+									td.text-end
+										span.miner-subsidy-fees
+
+									td.text-end
+										span.miner-percent
+
+								tr(id="hidden-row-to-fix-stripe-pattern", style="display: none;")
+
+								tr(id="miner-summary-totals", style="display: none;")
+									th.miner-name
+										| Total
+									
+									th.text-end
+										span.miner-block-count
+									
+									th.text-end
+										span.miner-subsidy-fees
+
+									th.text-end
+										| 100%
+
+		
+	if (false)
+		pre
+			code.json#json-content
+
+block endOfBody
+	
+	+graphPageScriptSetup
+	
+	
+	script.
+		var summary = null;
+		var statusId;
+		var statusInterval;
+		var graph = null;
+
+		var currentBlockHeight = !{currentBlockHeight};
+		var colors = ["#003f5c", "#2f4b7c", "#665191", "#a05195", "#d45087", "#f95d6a", "#ff7c43", "#ffa600", "#85cb39", "#00d688"];
+		
+		$(document).ready(function() {
+			prepareUI();
+
+			loadMiningData(currentBlockHeight - 144, currentBlockHeight);
+		});
+
+		function updateStatus() {
+			$.ajax({
+				url: `./internal-api/mining-summary-status?statusId=${statusId}`
+
+			}).done((res) => {
+				if (!res.count) {
+					// not started yet
+					return;
+				}
+
+				var percent = new Decimal(res.done).dividedBy(res.count).times(100);
+				
+				$("#data-progress").css("width", `${percent.toDP(0)}%`);
+				$("#progress-text").html(`<span class='fw-bold d-inline-block' style='width: 55px;'>${percent.toDP(1)}%</span><span class='small fw-light ms-2'>(${res.done.toLocaleString()} of ${res.count.toLocaleString()})</span>`);
+
+				if (res.done == res.count) {
+					clearInterval(statusInterval);
+
+					$.ajax({
+						url: `./internal-api/get-mining-summary?statusId=${statusId}`
+
+					}).done((summaryResult) => {
+						if (summaryResult && summaryResult.overall) {
+							summary = summaryResult;
+
+							$("#json-content").text(JSON.stringify(summary, null, 4));
+
+							hljs.highlightAll();
+
+							displaySummaryData(summary);
+						}
+					}).always(() => {
+						// nothing
+					});
+				}
+			}).fail((a, b, c) => {
+			}).always(() => {
+			});
+		}
+
+		function loadMiningData(startBlock, endBlock) {
+			statusId = Math.random().toString(36).substr(2, 5);
+
+			statusInterval = setInterval(function() { updateStatus(); }, 125);
+
+			$.ajax({
+				url: `./internal-api/build-mining-summary/${startBlock}/${endBlock}?statusId=${statusId}`
+
+			}).done((buildResult) => {
+				// we update status elsewhere, this call just kicks off the build
+
+			}).fail((jqXHR, textStatus, errorThrown) => {
+				console.log("Error: " + textStatus);
+				console.log("Error details: ", errorThrown);
+
+				//$(".loading-error").html(`<h6 class='mt-4 text-danger'>Failed loading mempool:</h6><pre><code class='json'>${JSON.stringify(textStatus)}</code></pre><pre><code class='json'>${JSON.stringify(errorThrown)}</code></pre>`);
+
+				//hljs.highlightAll();
+
+			}).always(() => {
+			});
+		}
+
+		function displaySummaryData(summary) {
+			$("#time-range-buttons .block-count-btn").removeClass("disabled");
+			$("#block-selections-buttons .dropdown-item").removeClass("disabled");
+
+			//console.log(JSON.stringify(results));
+
+			var totalSubsidyPlusFees = new Decimal(summary.overall.totalSubsidy).plus(new Decimal(summary.overall.totalFees));
+
+			var pieChartData = {labels:[], datasets:[{data:[], backgroundColor:[]}]};
+			var pieChartTotalPercent = new Decimal(0);
+
+			var colorIndex = 0;
+
+
+			for (var i = 0; i < summary.minerNamesSortedByBlockCount.length; i++) {
+				var minerName = summary.minerNamesSortedByBlockCount[i];
+				var minerSummary = summary.miners[minerName];
+
+				var row = $("#miner-summary-prototype").clone();
+				row.attr("id", null);
+				row.addClass("miner-summary-row");
+
+				var blockHeightsHtml = "";
+				for (var j = 0; j < minerSummary.blocks.length; j++) {
+					blockHeightsHtml += `<li><a href='./block-height/${minerSummary.blocks[j]}'>${minerSummary.blocks[j].toLocaleString()}</a></li>`;
+				}
+				blockHeightsHtml = `<ol>${blockHeightsHtml}</ol>`
+				
+				if (minerName == "Unknown") {
+					row.find(".miner-name-unknown").text(minerName);
+
+				} else if (minerName.startsWith("address-only:")) {
+					row.find(".miner-name-unknown").text(ellipsizeMiddle(minerName.substring("address-only:".length), 16));
+
+				} else {
+					row.find(".miner-name").text(minerName);
+				}
+
+				row.find(".miner-block-count").html(`<a href='javascript:void(0);' onclick="javascipt:$('#miner-block-heights-${i}').toggle();" title="Click to show ${minerSummary.blocks.length.toLocaleString()} block height(s)" data-bs-toggle="tooltip">${minerSummary.blocks.length.toLocaleString()}</a><br/><small id='miner-block-heights-${i}' style='display: none;'>${blockHeightsHtml}</small>`);
+				row.find(".miner-block-percent").text(`(${new Decimal(minerSummary.blocks.length).dividedBy(summary.overall.blockCount).times(100).toDecimalPlaces(1)}%)`);
+				
+				var subsidyPlusFees = new Decimal(minerSummary.totalSubsidy).plus(new Decimal(minerSummary.totalFees));
+				
+				row.find(".miner-subsidy-fees").text(subsidyPlusFees);
+
+				var revenuePercent = subsidyPlusFees.dividedBy(totalSubsidyPlusFees).times(100);
+
+				row.find(".miner-percent").text(revenuePercent.toDP(2) + "%");
+
+				if (revenuePercent > 1) {
+					if (minerName.startsWith("address-only:")) {
+						pieChartData.labels.push(ellipsizeMiddle(minerName.substring("address-only:".length), 16));
+
+					} else {
+						pieChartData.labels.push(minerName);
+					}
+
+					pieChartData.datasets[0].data.push(revenuePercent.toNumber());
+					pieChartData.datasets[0].backgroundColor.push(colors[colorIndex++ % colors.length]);
+
+					pieChartTotalPercent = pieChartTotalPercent.plus(revenuePercent);
+				}
+				
+				
+				updateCurrencyValue(row.find(".miner-subsidy-fees"), subsidyPlusFees);
+				
+
+				row.show();
+
+				$("#summary-table-body").append(row);
+			}
+
+			pieChartData.labels.push("Other");
+			pieChartData.datasets[0].data.push(new Decimal(100).minus(pieChartTotalPercent).toNumber());
+			pieChartData.datasets[0].backgroundColor.push("#aaaaaa");
+
+
+			var totalsRow = $("#miner-summary-totals");
+			totalsRow.find(".miner-block-count").text(summary.overall.blockCount.toLocaleString());
+			totalsRow.find(".miner-subsidy-fees").text(totalSubsidyPlusFees);
+
+			updateCurrencyValue(totalsRow.find(".miner-subsidy-fees"), totalSubsidyPlusFees);
+			
+			var parent = totalsRow.parent();
+			parent.remove(totalsRow);
+			parent.append(totalsRow);
+
+			totalsRow.show();
+
+
+
+			var ctx = document.getElementById("revenue-breakdown-chart").getContext('2d');
+
+			if (graph != null) {
+				graph.data.datasets = pieChartData.datasets;
+				graph.data.labels = pieChartData.labels;
+				graph.update();
+
+			} else {
+				graph = new Chart(ctx, {
+					type: 'doughnut',
+					options: {
+						plugins: {
+							legend: {
+								position: "left"
+							},
+						}
+					},
+					data: {
+						datasets: pieChartData.datasets,
+						labels: pieChartData.labels
+					},
+					
+				});
+			}
+			
+
+			//console.log("data: " + JSON.stringify(pieChartData.backgroundColors));
+
+
+			$("#summary-table").show();
+			$("#progress-wrapper").hide();
+		}
+
+		function prepareUI() {
+			$("#time-range-buttons .block-count-btn").on("click", function() {
+				// highlight current selection
+				$("#time-range-buttons .block-count-btn").removeClass("btn-primary").addClass("btn-outline-primary");
+				$(this).addClass("btn-primary").removeClass("btn-outline-primary");
+				$("#preconfigured-dropdown").removeClass("btn-primary").addClass("btn-outline-primary");
+				
+				var blockCount = parseInt($(this).attr("data-blockCount"));
+				
+				$(".miner-summary-row").remove();
+
+				$("#data-progress").css("width", "0%");
+				$("#block-progress-text").text("");
+
+				$("#summary-table").hide();
+				$("#progress-wrapper").show();
+
+				loadMiningData(currentBlockHeight - blockCount, currentBlockHeight);
+			});
+
+			$("#block-selections-buttons .dropdown-item").on("click", function() {
+				// highlight current selection
+				$("#time-range-buttons .block-count-btn").removeClass("btn-primary").addClass("btn-outline-primary");
+				$("#preconfigured-dropdown").removeClass("btn-outline-primary").addClass("btn-primary");
+				
+				var blocks = $(this).attr("data-blocks");
+				var bStartEnd = blocks.split("-");
+				var bStart = parseInt(bStartEnd[0]);
+				var bEnd = parseInt(bStartEnd[1]);
+
+				$(".miner-summary-row").remove();
+
+				$("#data-progress").css("width", "0%");
+				$("#block-progress-text").text("");
+
+				$("#main-content").hide();
+				$("#progress-wrapper").show();
+
+				loadMiningData(bStart, bEnd);
+			});
+
+			$("#custom-range-form").on("submit", function() {
+				// highlight current selection
+				$("#time-range-buttons .block-count-btn").removeClass("btn-primary").addClass("btn-outline-primary");
+				$("#preconfigured-dropdown").removeClass("btn-primary").addClass("btn-outline-primary");
+				
+				var bStart = parseInt($("#custom-range-start").val());
+				var bEnd = parseInt($("#custom-range-end").val());
+
+				$(".miner-summary-row").remove();
+
+				$("#data-progress").css("width", "0%");
+				$("#block-progress-text").text("");
+
+				$("#main-content").hide();
+				$("#progress-wrapper").show();
+
+				loadMiningData(bStart, bEnd);
+
+				return false;
+			});
+		}

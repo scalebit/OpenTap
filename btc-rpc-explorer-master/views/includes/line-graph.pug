@@ -1,0 +1,79 @@
++graphPageScriptSetup
+
+canvas.mb-3(id=graphData.id)
+
+script.
+	Chart.defaults.elements.point.radius = 1;
+	var ctx = document.getElementById("#{graphData.id}").getContext('2d');
+	var graph = new Chart(ctx, {
+		type: 'line',
+		labels: [#{graphData.labels}],
+		data: {
+			datasets: [{
+				borderColor: '#007bff',
+				borderWidth: 2,
+				backgroundColor: 'rgba(0,0,0,0)',
+				data: #{graphData.dataVar},
+			}]
+		},
+		options: {
+			animation:{
+				duration:0
+			},
+			title: {
+				display: false,
+				text: '#{graphData.title}'
+			},
+			plugins: {
+				legend: {
+					display: false
+				},
+			},
+			scales: {
+				x: {
+					type: 'linear',
+					position: 'bottom',
+					scaleLabel: {
+						display: true,
+						labelString: '#{graphData.xaxisTitle}'
+					},
+					grid: {
+						color: gridLineColor
+					},
+					ticks: {
+						stepSize: #{graphData.xaxisStep},
+						/*callback: function(value, index, values) {
+							if (value > 1000000) {
+								return (value / 1000000).toLocaleString() + "M";
+
+							} else if (value > 1000) {
+								return (value / 1000).toLocaleString() + "k";
+
+							} else {
+								return value;
+							}
+						}*/
+					}
+				},
+				y: {
+					scaleLabel: {
+						display: true,
+						labelString: '#{graphData.yaxisTitle}'
+					},
+					grid: {
+						color: gridLineColor
+					},
+					ticks: {
+						callback: function(value, index, values) {
+							if (value > 1000000) {
+								return (value / 1000000).toLocaleString() + "M";
+
+							} else {
+								return value;
+							}
+						}
+					}
+				}
+			}
+		}
+	});
