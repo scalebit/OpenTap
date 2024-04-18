@@ -6,10 +6,11 @@ import {
     payments,
     crypto,
     Psbt,
-    Transaction
+    Transaction,
+    address
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./blockstream_utils.js";
+import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "./RPC.js";
 import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
 import { Hex, Taptree } from "bitcoinjs-lib/src/types";
 import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness.js";
@@ -25,7 +26,7 @@ import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { toXOnly, tweakSigner, tapTweakHash, IUTXO, Config } from "./utils.js"
 import { p2pk } from "bitcoinjs-lib/src/payments/p2pk.js";
 import { asm_builder, asm_csv, multisig_taptree } from "./taproot_builder.js"
-import { get_taproot_bridge, pay_sig, pay_htlc } from "./bridge_builder.js"
+import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "./bridge_builder.js"
 import { threadId } from "worker_threads";
 import * as fs from 'fs';
 import { strictEqual } from "assert";
@@ -39,13 +40,29 @@ const LEAF_VERSION_TAPSCRIPT = 192;
 
 async function start() {
     // Stable Pair
-    const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network);
-    // await bridge_unit(keypair);
+    const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
+
+    // Classic Multisig
+    // await bridge_unit(keypair)
+
+    // Privacy Multisig
+    // await bridge_unit_mulit_leaf(keypair, 1)
+
+    // await start_p2pktr(keypair);
+    await start_musig_txbuilder()
+
+    // Create a Taproot Bridge
     // await bridge_ceate_and_dump()
-    await bridge_unlock_with_dump(1)
+
+    // Musig pay
+    // await bridge_unlock_with_dump(1)
+
+    // Escape hatch
+    // await bridge_unlock_with_dump(2)
+
 }
 
-async function test() {
+async function test_case() {
     // Random Pair
     // const keypair = ECPair.makeRandom({ network });
 
@@ -141,11 +158,11 @@ async function start_p2pktr(keypair: Signer) {
     // let tapKeySig = Buffer.from(sign)
     // psbt.updateInput(0, { tapKeySig })
 
-    console.log(psbt.data.inputs)
     psbt.finalizeAllInputs();
-    console.log(psbt.data.inputs)
 
     const tx = psbt.extractTransaction();
+    console.log(tx)
+
     console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
     console.log("Txid is:", tx.getId());
 
@@ -239,6 +256,138 @@ async function start_musig(keypair: Signer) {
         console.error('The error occur in:', error);
     }
 }
+
+async function start_musig_txbuilder() {
+    let wallets = get_agg_keypair(5);
+    let options = get_option(wallets);
+    let pub = get_agg_pub(wallets, options);
+
+    console.log('Testing schnorr tx.');
+
+    // Generate an address from the tweaked public key
+    const p2pktr = payments.p2tr({
+        pubkey: Buffer.from(pub, 'hex'),
+        network
+    });
+
+    const p2pktr_addr = p2pktr.address ?? "";
+    console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`);
+
+    // Push transaction but not confirm
+    let temp_trans = await pushTrans(p2pktr_addr);
+    console.log("the new txid is:", temp_trans);
+
+    // Get UTXO
+    const utxos = await getUTXOfromTx(temp_trans, p2pktr_addr);
+    const all_utxos = await getALLUTXOfromTx(temp_trans, p2pktr_addr);
+    // console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
+
+    // Building a new transaction
+    let transaction = new Transaction(); // Assuming you have defined network
+    transaction.addInput(Buffer.from(utxos.txid, 'hex').reverse(), utxos.vout);
+
+    const scriptPubKey = bitcoin.address.toOutputScript("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", network);
+    transaction.addOutput(scriptPubKey, utxos.value - 200);
+
+    let prevOutScript: any[] = []
+    let prevValue: any[] = []
+    for (var i = 0; i < all_utxos.length; i++) {
+        prevOutScript.push(bitcoin.address.toOutputScript(all_utxos[i].address, network));
+        prevValue.push(all_utxos[i].value)
+    }
+
+    let p1 = bitcoin.address.toOutputScript(all_utxos[0].address, network)
+    let p2 = bitcoin.address.toOutputScript(all_utxos[1].address, network)
+
+    let v1 = all_utxos[0].value
+    let v2 = all_utxos[1].value
+
+    // const prevOutScript = ;
+    // const prevOutScript2 = bitcoin.address.toOutputScript(p2pktr_addr, network);
+
+    let signatureHash = transaction.hashForWitnessV1(0, [p2], [v2], Transaction.SIGHASH_DEFAULT);
+    let sign: Buff = get_agg_sign(wallets, options, signatureHash);
+
+    let tapKeySig = Buffer.from(sign); // Ensure the signature is in the correct format
+
+    transaction.ins[0].witness = [tapKeySig];
+
+    // Check if the signature is valid.
+    const isValid2 = schnorr.verify(sign, signatureHash, pub)
+    if (isValid2) { console.log('The signature should validate using another library.') }
+    // Both of this two passed.
+    const isValid1 = tinysecp.verifySchnorr(signatureHash, pub, sign);
+    if (isValid1) { console.log('The test demo should produce a valid signature.') }
+
+    // transaction.version = 2
+    console.log(transaction)
+
+    // Broadcasting the transaction
+    const txHex = transaction.toHex();
+    console.log(`Broadcasting Transaction Hex: ${txHex}`);
+    const broadcastResult = await broadcastraw(txHex);
+    console.log(`Success! Broadcast result: ${broadcastResult}`);
+
+    // Generate new block to confirm
+    await pushBlock(p2pktr_addr);
+}
+
+// async function start_tap_txbuilder(keypair: Signer) {
+//     // let wallets = get_agg_keypair(5);
+//     // let options = get_option(wallets);
+//     // let pub = get_agg_pub(wallets, options);
+
+//     const tweakedSigner = tweakSigner(keypair, { network });
+//     // Generate an address from the tweaked public key
+//     const p2pktr = payments.p2tr({
+//         pubkey: toXOnly(tweakedSigner.publicKey),
+//         network
+//     });
+
+//     const p2pktr_addr = p2pktr.address ?? "";
+//     console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`);
+
+//     // Push transaction but not confirm
+//     let temp_trans = await pushTrans(p2pktr_addr);
+//     console.log("the new txid is:", temp_trans);
+
+//     // Get UTXO
+//     const utxos = await getUTXOfromTx(temp_trans, p2pktr_addr);
+//     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
+
+//     // Building a new transaction
+//     let transaction = new Transaction(); // Assuming you have defined network
+//     transaction.addInput(Buffer.from(utxos.txid, 'hex').reverse(), utxos.vout);
+
+//     const scriptPubKey = bitcoin.address.toOutputScript("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", network);
+//     transaction.addOutput(scriptPubKey, utxos.value - 200);
+
+//     const prevOutScript = bitcoin.address.toOutputScript(p2pktr_addr, network);
+
+//     let signatureHash = transaction.hashForWitnessV1(0, [prevOutScript], [utxos.value], Transaction.SIGHASH_DEFAULT);
+//     let tapKeySig = Buffer.from(sign); // Ensure the signature is in the correct format
+
+//     transaction.ins[0].witness = [tapKeySig];
+
+//     // Check if the signature is valid.
+//     const isValid2 = schnorr.verify(sign, signatureHash, pub)
+//     if (isValid2) { console.log('The signature should validate using another library.') }
+//     // Both of this two passed.
+//     const isValid1 = tinysecp.verifySchnorr(signatureHash, pub, sign);
+//     if (isValid1) { console.log('The test demo should produce a valid signature.') }
+
+//     // transaction.version = 2
+//     console.log(transaction)
+
+//     // Broadcasting the transaction
+//     const txHex = transaction.toHex();
+//     console.log(`Broadcasting Transaction Hex: ${txHex}`);
+//     const broadcastResult = await broadcastraw(txHex);
+//     console.log(`Success! Broadcast result: ${broadcastResult}`);
+
+//     // Generate new block to confirm
+//     await pushBlock(p2pktr_addr);
+// }
 
 // TapTree test
 async function start_taptree(keypair: Signer) {
@@ -583,6 +732,7 @@ async function bridge_workflow(keypair: Signer) {
 }
 
 async function bridge_unit(keypair: Signer) {
+
     const internalKey = keypair;
     const Threshold = 25;
     const KeyNum = 25;
@@ -612,13 +762,60 @@ async function bridge_unit(keypair: Signer) {
     //Path2: update csv unlock
     //////////////////////////
     if (Tappath == 2) {
-        await pay_htlc(network, utxos, p2csvtr, internalKey, Locktime)
+        await pay_csv(network, utxos, p2csvtr, internalKey, Locktime)
+    }
+}
+
+async function bridge_unit_mulit_leaf(keypair: Signer, unlocker: number) {
+    const key_first = ECPair.makeRandom({ network })
+    const internalKey = keypair;
+    const Threshold = 3;
+    const KeyNum = 4;
+    const Locktime = 5;
+    const Tappath: number = 1;
+
+    // All input have to be signed
+    // So generated some random private key to sign
+    const leafKeys = [];
+    const leafPubkeys = [];
+    for (let i = 0; i < KeyNum; i++) {
+        const leafKey: Signer = ECPair.makeRandom({ network });
+        leafKeys.push(leafKey);
+        leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
+    }
+
+    const [p2pktr, p2csvtr, utxos, combinations] = await get_taproot_bridge_multi_leaf(keypair, leafKeys, KeyNum, Threshold, Locktime, network, key_first);
+    const p2tr: bitcoin.Payment[] = p2pktr as bitcoin.Payment[]
+
+    // Use combinations to get the keypair
+    let comb_keypair: Signer[] = []
+    let t_combinations: string[] = combinations as string[]
+    for (let i = 0; i < t_combinations[unlocker].length; i++) {
+        for (let j = 0; j < leafKeys.length; j++) {
+            if (leafPubkeys[j] == t_combinations[unlocker][i]) {
+                comb_keypair.push(leafKeys[j])
+            }
+        }
+    }
+
+    /////////////////////////////////
+    //Path 1: update multi-sig unlock
+    /////////////////////////////////
+    if (Tappath == 1) {
+        await pay_sig_multi_leaf(network, utxos, p2tr, comb_keypair, Threshold, unlocker)
+    }
+
+    //////////////////////////
+    //Path2: update csv unlock
+    //////////////////////////
+    if (Tappath == 2) {
+        await pay_csv(network, utxos, p2csvtr, internalKey, Locktime)
     }
 }
 
 async function bridge_ceate_and_dump() {
     const config: Config = {
-        internalKey: ECPair.makeRandom({ network }),
+        internalKey: ECPair.makeRandom({ network }).toWIF(),
         Threshold: 2,
         KeyNum: 2,
         Locktime: 5
@@ -635,14 +832,17 @@ async function bridge_ceate_and_dump() {
         leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
         leafWIFKeys.push(leafKey.toWIF())
     }
+    const key = ECPair.fromWIF(config.internalKey.toString(), network)
 
-    const [p2pktr, p2csvtr, utxos] = await get_taproot_bridge(config.internalKey, leafKeys, config.KeyNum, config.Threshold, config.Locktime, network);
+    const [p2pktr, p2csvtr, utxos] = await get_taproot_bridge(key, leafKeys, config.KeyNum, config.Threshold, config.Locktime, network);
 
     fs.writeFileSync('./dump/config.json', JSON.stringify(config))
     fs.writeFileSync('./dump/leafWIFKeys.json', JSON.stringify(leafWIFKeys))
     fs.writeFileSync('./dump/p2pktr.json', JSON.stringify(p2pktr))
     fs.writeFileSync('./dump/p2csvtr.json', JSON.stringify(p2csvtr))
     fs.writeFileSync('./dump/utxos.json', JSON.stringify(utxos))
+
+    await pushBlock("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w")
 
 }
 
@@ -663,7 +863,7 @@ async function bridge_unlock_with_dump(path: number) {
         }
         return v;
     });
-    const p2csvtr: payments.Payment = JSON.parse(fs.readFileSync("./dump/config.json", "utf8"), (k, v) => {
+    const p2csvtr: payments.Payment = JSON.parse(fs.readFileSync("./dump/p2csvtr.json", "utf8"), (k, v) => {
         if (
             v !== null && typeof v === 'object' && 'type' in v && v.type === 'Buffer' && 'data' in v && Array.isArray(v.data)) {
             return Buffer.from(v.data);
@@ -682,6 +882,7 @@ async function bridge_unlock_with_dump(path: number) {
     for (var i = 0; i < leafWIFKeys.length; i++) {
         leafKeys.push(ECPair.fromWIF(leafWIFKeys[i].toString(), network))
     }
+    let key = ECPair.fromWIF(config.internalKey.toString(), network)
 
     /////////////////////////////////
     //Path 1: update multi-sig unlock
@@ -694,7 +895,7 @@ async function bridge_unlock_with_dump(path: number) {
     // //Path2: update csv unlock
     // //////////////////////////
     if (path == 2) {
-        await pay_htlc(network, utxos, p2csvtr, config.internalKey, config.Locktime)
+        await pay_csv(network, utxos, p2csvtr, key, config.Locktime)
     }
 }
 

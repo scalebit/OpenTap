@@ -9,7 +9,7 @@ import {
     Transaction
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./blockstream_utils.js";
+import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./RPC.js";
 import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
 import { Hex, Taptree } from "bitcoinjs-lib/src/types";
 import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness.js";
@@ -88,6 +88,7 @@ export function createKeySpendOutput(publicKey: any) {
 export interface IUTXO {
     txid: string;
     vout: number;
+    address: string;
     status: {
         confirmed: boolean;
         block_height: number;
@@ -98,7 +99,7 @@ export interface IUTXO {
 }
 
 export interface Config {
-    internalKey: Signer,
+    internalKey: string,
     Threshold: number,
     KeyNum: number,
     Locktime: number

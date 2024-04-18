@@ -9,7 +9,7 @@ import {
     Transaction
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./blockstream_utils.js";
+import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./RPC.js";
 import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
 import { Hex, Taptree } from "bitcoinjs-lib/src/types";
 import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness.js";
@@ -23,6 +23,7 @@ import { schnorr } from '@noble/curves/secp256k1'
 import { assert } from "console";
 import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { p2pk } from "bitcoinjs-lib/src/payments/p2pk.js";
+import { toXOnly } from "./utils.js";
 
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
@@ -70,3 +71,15 @@ function get_threshold_by_op(threshold: number) {
     }
     return asm
 }
+
+// export function asm_builder_multi_leaf(key: Signer, all_key: any[], threshold: number) {
+//     let leafScriptAsm: string = `${toXOnly(key.publicKey).toString('hex')} OP_CHECKSIG`;
+//     for (var i = 0; i < all_key.length; i++) {
+//         leafScriptAsm = leafScriptAsm + ` ` + `${all_key[i]} OP_CHECKSIGADD`
+//     }
+//     leafScriptAsm = (leafScriptAsm + ` ` + `${bitcoin.script.number.encode(threshold).toString('hex')}` + ` OP_GREATERTHANOREQUAL`).toString()
+//     console.log("asmbuilder:" + leafScriptAsm)
+//     const leafScript = bitcoin.script.fromASM(leafScriptAsm);
+//     return leafScript;
+// }
+

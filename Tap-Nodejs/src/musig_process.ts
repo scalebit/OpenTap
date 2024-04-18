@@ -7,7 +7,7 @@ import {
     crypto,
     Psbt
 } from "bitcoinjs-lib";
-import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./blockstream_utils.js";
+import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./RPC.js";
 import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness.js";
