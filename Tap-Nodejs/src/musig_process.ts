@@ -7,18 +7,14 @@ import {
     crypto,
     Psbt
 } from "bitcoinjs-lib";
-import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./RPC.js";
-import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
-import { Taptree } from "bitcoinjs-lib/src/types";
-import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness.js";
+import { pushTrans, getUTXOfromTx } from "./RPC.js";
+import { ECPairFactory, ECPairAPI} from 'ecpair';
 import { Buff } from '@cmdcode/buff'
 import * as musig from "@cmdcode/musig2"
 import * as tinysecp from 'tiny-secp256k1'
 import { schnorr } from '@noble/curves/secp256k1'
-import { createPrivateKey } from "crypto";
-import { buffer } from "stream/consumers";
 import { sha256 } from "bitcoinjs-lib/src/crypto.js";
-import { toXOnly, tweakSigner, tapTweakHash } from "./utils.js"
+import { toXOnly } from "./utils.js"
 
 initEccLib(tinysecp);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
@@ -197,4 +193,4 @@ export function get_agg_sign(wallets: any[], options: any, message: any) {
     const signature = musig.combine_psigs(ctx, group_sigs)
 
     return signature;
-}
+};

@@ -1,33 +1,15 @@
 import {
     initEccLib,
-    networks,
-    script,
     Signer,
-    payments,
-    crypto,
-    Psbt,
-    Transaction
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx } from "./RPC.js";
-import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
-import { Hex, Taptree } from "bitcoinjs-lib/src/types";
-import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness.js";
-import { get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "./musig_process.js"
-import { asm_builder, asm_csv, multisig_taptree } from "./taproot_builder.js"
-import { toXOnly, tweakSigner, tapTweakHash } from "./utils.js"
+import { broadcast, pushBlock, pushTrans, getUTXOfromTx } from "./RPC.js";
+import { ECPairFactory, ECPairAPI } from 'ecpair';
+import { Taptree } from "bitcoinjs-lib/src/types";
+import { asm_builder, asm_csv } from "./taproot_builder.js"
+import { toXOnly } from "./utils.js"
 import * as tinysecp from 'tiny-secp256k1'
-import { buffer } from "stream/consumers";
-import { Buff } from '@cmdcode/buff'
-import { sha256 } from "bitcoinjs-lib/src/crypto.js";
-import { Sign, sign } from "crypto";
-import { schnorr } from '@noble/curves/secp256k1'
-import { assert } from "console";
-import { regtest } from "bitcoinjs-lib/src/networks.js";
-import { p2pk } from "bitcoinjs-lib/src/payments/p2pk.js";
 
-import { signer } from "@cmdcode/crypto-tools";
-import { NetworkInterfaceBase } from "os";
 
 initEccLib(tinysecp as any);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);

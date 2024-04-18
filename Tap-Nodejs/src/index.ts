@@ -7,30 +7,20 @@ import {
     crypto,
     Psbt,
     Transaction,
-    address
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
 import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "./RPC.js";
 import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
-import { Hex, Taptree } from "bitcoinjs-lib/src/types";
-import { witnessStackToScriptWitness } from "./witness_stack_to_script_witness.js";
+import { Taptree } from "bitcoinjs-lib/src/types";
 import { test1, test2, get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "./musig_process.js"
 import * as tinysecp from 'tiny-secp256k1'
-import { buffer } from "stream/consumers";
 import { Buff } from '@cmdcode/buff'
-import { sha256 } from "bitcoinjs-lib/src/crypto.js";
-import { sign } from "crypto";
 import { schnorr } from '@noble/curves/secp256k1'
-import { assert } from "console";
 import { regtest } from "bitcoinjs-lib/src/networks.js";
-import { toXOnly, tweakSigner, tapTweakHash, IUTXO, Config } from "./utils.js"
-import { p2pk } from "bitcoinjs-lib/src/payments/p2pk.js";
-import { asm_builder, asm_csv, multisig_taptree } from "./taproot_builder.js"
+import { toXOnly, tweakSigner, IUTXO, Config } from "./utils.js"
+import { asm_builder, asm_csv, } from "./taproot_builder.js"
 import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "./bridge_builder.js"
-import { threadId } from "worker_threads";
 import * as fs from 'fs';
-import { strictEqual } from "assert";
-import { Key } from "readline";
 
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
@@ -83,9 +73,6 @@ async function test_case() {
 
     // Musig tx
     await start_musig(keypair);
-
-    // Tapleaf tx
-    await start_taptree(keypair);
 }
 
 // Basic test
@@ -330,236 +317,6 @@ async function start_musig_txbuilder() {
 
     // Generate new block to confirm
     await pushBlock(p2pktr_addr);
-}
-
-// async function start_tap_txbuilder(keypair: Signer) {
-//     // let wallets = get_agg_keypair(5);
-//     // let options = get_option(wallets);
-//     // let pub = get_agg_pub(wallets, options);
-
-//     const tweakedSigner = tweakSigner(keypair, { network });
-//     // Generate an address from the tweaked public key
-//     const p2pktr = payments.p2tr({
-//         pubkey: toXOnly(tweakedSigner.publicKey),
-//         network
-//     });
-
-//     const p2pktr_addr = p2pktr.address ?? "";
-//     console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`);
-
-//     // Push transaction but not confirm
-//     let temp_trans = await pushTrans(p2pktr_addr);
-//     console.log("the new txid is:", temp_trans);
-
-//     // Get UTXO
-//     const utxos = await getUTXOfromTx(temp_trans, p2pktr_addr);
-//     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
-
-//     // Building a new transaction
-//     let transaction = new Transaction(); // Assuming you have defined network
-//     transaction.addInput(Buffer.from(utxos.txid, 'hex').reverse(), utxos.vout);
-
-//     const scriptPubKey = bitcoin.address.toOutputScript("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", network);
-//     transaction.addOutput(scriptPubKey, utxos.value - 200);
-
-//     const prevOutScript = bitcoin.address.toOutputScript(p2pktr_addr, network);
-
-//     let signatureHash = transaction.hashForWitnessV1(0, [prevOutScript], [utxos.value], Transaction.SIGHASH_DEFAULT);
-//     let tapKeySig = Buffer.from(sign); // Ensure the signature is in the correct format
-
-//     transaction.ins[0].witness = [tapKeySig];
-
-//     // Check if the signature is valid.
-//     const isValid2 = schnorr.verify(sign, signatureHash, pub)
-//     if (isValid2) { console.log('The signature should validate using another library.') }
-//     // Both of this two passed.
-//     const isValid1 = tinysecp.verifySchnorr(signatureHash, pub, sign);
-//     if (isValid1) { console.log('The test demo should produce a valid signature.') }
-
-//     // transaction.version = 2
-//     console.log(transaction)
-
-//     // Broadcasting the transaction
-//     const txHex = transaction.toHex();
-//     console.log(`Broadcasting Transaction Hex: ${txHex}`);
-//     const broadcastResult = await broadcastraw(txHex);
-//     console.log(`Success! Broadcast result: ${broadcastResult}`);
-
-//     // Generate new block to confirm
-//     await pushBlock(p2pktr_addr);
-// }
-
-// TapTree test
-async function start_taptree(keypair: Signer) {
-
-    console.log(`Running "Taptree example"`);
-    // Create a tap tree with two spend paths
-    // One path should allow spending using secret
-    // The other path should pay to another pubkey
-
-    // Make random key for hash_lock
-    // const hash_lock_keypair = ECPair.makeRandom({ network });
-
-    // Stable Pair
-    // It means the hash locker pk is equal to p2TR pk
-    const hash_lock_keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network);
-
-    const secret_bytes = Buffer.from('SECRET');
-    const hash = crypto.hash160(secret_bytes);
-    // Construct script to pay to hash_lock_keypair if the correct preimage/secret is provided
-    const hash_script_asm = `OP_HASH160 ${hash.toString('hex')} OP_EQUALVERIFY ${toXOnly(hash_lock_keypair.publicKey).toString('hex')} OP_CHECKSIG`;
-    const hash_lock_script = script.fromASM(hash_script_asm);
-
-    const p2pk_script_asm = `${toXOnly(keypair.publicKey).toString('hex')} OP_CHECKSIG`;
-    const p2pk_script = script.fromASM(p2pk_script_asm);
-
-    const scriptTree: Taptree = [
-        {
-            output: hash_lock_script
-        },
-        {
-            output: p2pk_script
-        }
-    ];
-
-    const hash_lock_redeem = {
-        output: hash_lock_script,
-        redeemVersion: 192,
-    };
-    const p2pk_redeem = {
-        output: p2pk_script,
-        redeemVersion: 192
-    }
-
-    const script_p2tr = payments.p2tr({
-        internalPubkey: toXOnly(keypair.publicKey),
-        scriptTree,
-        network
-    });
-    const script_addr = script_p2tr.address ?? '';
-
-    const p2pk_p2tr = payments.p2tr({
-        internalPubkey: toXOnly(keypair.publicKey),
-        scriptTree,
-        redeem: p2pk_redeem,
-        network
-    });
-
-    const hash_lock_p2tr = payments.p2tr({
-        internalPubkey: toXOnly(keypair.publicKey),
-        scriptTree,
-        redeem: hash_lock_redeem,
-        network
-    });
-
-    console.log(`Waiting till UTXO is detected at this Address: ${script_addr}`);
-    let utxos = await waitUntilUTXO(script_addr)
-    console.log(`Trying the P2PK path with UTXO ${utxos[0].txid}:${utxos[0].vout}`);
-
-    const p2pk_psbt = new Psbt({ network });
-    p2pk_psbt.addInput({
-        hash: utxos[0].txid,
-        index: utxos[0].vout,
-        witnessUtxo: { value: utxos[0].value, script: p2pk_p2tr.output! },
-        tapLeafScript: [
-            {
-                leafVersion: p2pk_redeem.redeemVersion,
-                script: p2pk_redeem.output,
-                controlBlock: p2pk_p2tr.witness![p2pk_p2tr.witness!.length - 1]
-            }
-        ]
-    });
-
-    p2pk_psbt.addOutput({
-        address: "mohjSavDdQYHRYXcS3uS6ttaHP8amyvX78", // faucet address
-        value: utxos[0].value - 150
-    });
-
-    p2pk_psbt.signInput(0, keypair);
-    p2pk_psbt.finalizeAllInputs();
-
-    let tx = p2pk_psbt.extractTransaction();
-    console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
-    let txid = await broadcast(tx.toHex());
-    console.log(`Success! Txid is ${txid}`);
-
-    console.log(`Waiting till UTXO is detected at this Address: ${script_addr}`);
-    utxos = await waitUntilUTXO(script_addr)
-    console.log(`Trying the Hash lock spend path with UTXO ${utxos[0].txid}:${utxos[0].vout}`);
-
-    const tapLeafScript = {
-        leafVersion: hash_lock_redeem.redeemVersion,
-        script: hash_lock_redeem.output,
-        controlBlock: hash_lock_p2tr.witness![hash_lock_p2tr.witness!.length - 1]
-    };
-
-    const psbt = new Psbt({ network });
-    psbt.addInput({
-        hash: utxos[0].txid,
-        index: utxos[0].vout,
-        witnessUtxo: { value: utxos[0].value, script: hash_lock_p2tr.output! },
-        tapLeafScript: [
-            tapLeafScript
-        ]
-    });
-
-    psbt.addOutput({
-        address: "mohjSavDdQYHRYXcS3uS6ttaHP8amyvX78", // faucet address
-        value: utxos[0].value - 150
-    });
-
-    psbt.signInput(0, hash_lock_keypair);
-
-    // We have to construct our witness script in a custom finalizer
-
-    const customFinalizer = (_inputIndex: number, input: any) => {
-        const scriptSolution = [
-            input.tapScriptSig[0].signature,
-            secret_bytes
-        ];
-        const witness = scriptSolution
-            .concat(tapLeafScript.script)
-            .concat(tapLeafScript.controlBlock);
-
-        return {
-            finalScriptWitness: witnessStackToScriptWitness(witness)
-        }
-    }
-
-    psbt.finalizeInput(0, customFinalizer);
-
-    tx = psbt.extractTransaction();
-    console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
-    txid = await broadcast(tx.toHex());
-    console.log(`Success! Txid is ${txid}`);
-
-    // Spend from this address without using the script tree
-
-    // console.log(`Waiting till UTXO is detected at this Address: ${script_addr}`);
-    // utxos = await waitUntilUTXO(script_addr)
-    // console.log(`Trying the Hash lock spend path with UTXO ${utxos[0].txid}:${utxos[0].vout}`);
-
-    // const key_spend_psbt = new Psbt({ network });
-    // key_spend_psbt.addInput({
-    //     hash: utxos[0].txid,
-    //     index: utxos[0].vout,
-    //     witnessUtxo: { value: utxos[0].value, script: script_p2tr.output! },
-    //     tapInternalKey: toXOnly(keypair.publicKey),
-    //     tapMerkleRoot: script_p2tr.hash
-    // });
-    // key_spend_psbt.addOutput({
-    //     address: "mohjSavDdQYHRYXcS3uS6ttaHP8amyvX78", // faucet address
-    //     value: utxos[0].value - 150
-    // });
-    // // We need to create a signer tweaked by script tree's merkle root
-    // const tweakedSigner = tweakSigner(keypair, { tweakHash: script_p2tr.hash });
-    // key_spend_psbt.signInput(0, tweakedSigner);
-    // key_spend_psbt.finalizeAllInputs();
-
-    // tx = key_spend_psbt.extractTransaction();
-    // console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
-    // txid = await broadcast(tx.toHex());
-    // console.log(`Success! Txid is ${txid}`);
 }
 
 async function bridge_workflow(keypair: Signer) {
