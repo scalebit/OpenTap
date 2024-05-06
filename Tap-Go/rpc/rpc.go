@@ -17,11 +17,31 @@ type Wallet struct {
 }
 
 var rpcConfig = &rpcclient.ConnConfig{
-	Host:         "localhost:18443/wallet/wallet1",
+	Host:         "localhost:18443",
 	User:         "user",
 	Pass:         "pass",
 	HTTPPostMode: true,
 	DisableTLS:   true,
+}
+
+func GetUTXOFromTx(txid *chainhash.Hash, address string) (*chainhash.Hash, int64, []byte, error) {
+	client, err := rpcclient.New(rpcConfig, nil)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	defer client.Shutdown()
+
+	tx_res, err := client.GetRawTransaction(txid)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	balance := tx_res.MsgTx().TxOut[0].Value
+	pubKeyScript := tx_res.MsgTx().TxOut[0].PkScript
+
+	//todo:判断address
+
+	return txid, balance, pubKeyScript, nil
 }
 
 func GetPrevTxByTxHash(txhash *chainhash.Hash) (string, error) {
