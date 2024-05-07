@@ -72,7 +72,7 @@ async function test_case() {
     await start_p2pktr(keypair);
 
     // Musig tx
-    await start_musig(keypair);
+    await start_musig_txbuilder();
 }
 
 // Basic test
@@ -161,89 +161,6 @@ async function start_p2pktr(keypair: Signer) {
 }
 
 // Musig test
-async function start_musig(keypair: Signer) {
-    try {
-        // Encode an example string as bytes.
-        let wallets = get_agg_keypair(5)
-        let options = get_option(wallets)
-        let pub = get_agg_pub(wallets, options)
-
-        console.log('Testing schnorr tx.')
-
-        // Generate an address from the tweaked public key
-        const p2pktr = payments.p2tr({
-            internalPubkey: Buffer.from(pub),
-            network
-        });
-
-        // const p2pktr = payments.p2tr({
-        //     pubkey: Buffer.from(pub),
-        //     network
-        // });
-
-        const p2pktr_addr = p2pktr.address ?? "";
-        console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`)
-
-        // push trans but not confirm
-        let temp_trans = await pushTrans(p2pktr_addr)
-        console.log("the new txid is:", temp_trans)
-
-        // await pushBlock(p2pktr_addr)
-
-        // get UTXO
-        const utxos = await getUTXOfromTx(temp_trans, p2pktr_addr)
-        console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
-
-        const psbt = new Psbt({ network });
-
-        psbt.addInput({
-            hash: utxos.txid,
-            index: utxos.vout,
-            witnessUtxo: { value: utxos.value, script: p2pktr.output! },
-            tapInternalKey: Buffer.from(pub),
-        });
-
-        // utxos.value
-        psbt.addOutput({
-            address: "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", // main wallet address 
-            value: utxos.value - 150
-        });
-
-        // Workground (does not work either)
-        let transaction = new Transaction;
-        transaction.addInput(Buffer.from(utxos.txid, 'hex').reverse(), utxos.vout)
-        transaction.addOutput(p2pktr.output!, utxos.value - 150)
-        let signatureHash = transaction.hashForWitnessV1(0, [p2pktr.output!], [utxos.value - 150], Transaction.SIGHASH_ALL);
-
-        // let msg = signatureHash;
-        let msg = psbt.gettaproothash(0, Buffer.from(pub))
-        let sign = get_agg_sign(wallets, options, Buff.from(msg));
-
-        let tapKeySig = Buffer.from(sign)
-        psbt.updateInput(0, { tapKeySig })
-        console.log(psbt.data.inputs)
-        psbt.finalizeAllInputs();
-        console.log(psbt.data.inputs)
-
-        // const isValid2 = schnorr.verify(Buffer.from(sign), Buffer.from(msg), Buffer.from(pub))
-        // if (isValid2) { console.log('The signature should validate using another library.') }
-
-        const tx = psbt.extractTransaction();
-        console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
-        console.log("Txid is:", tx.getId());
-
-        // ERROR: Borad cast will failed
-        const txHex = await broadcast(tx.toHex());
-        console.log(`Success! TxHex is ${txHex}`);
-
-        // generate new block to lookup
-        await pushBlock(p2pktr_addr)
-
-    } catch (error) {
-        console.error('The error occur in:', error);
-    }
-}
-
 async function start_musig_txbuilder() {
     let wallets = get_agg_keypair(5);
     let options = get_option(wallets);

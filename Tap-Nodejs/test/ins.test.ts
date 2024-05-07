@@ -4,7 +4,7 @@ import * as should from "should";
 
 
 describe('#average', () => {
-    it('should return the average of array', done => {
-        ins.fetchInscriptions(1);
+    it('should return the average of array', () => {
+        console.log(ins.fetchInscriptions(1));
     })
 })
