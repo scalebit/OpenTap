@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "chai": "^5.1.0",
+    "mocha": "^10.4.0",
+    "should": "^13.2.3"
+  },
+  "scripts": {
+    "test": "mocha",
+    "start": "node app.js"
+  }
+}

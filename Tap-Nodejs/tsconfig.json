@@ -1,7 +1,8 @@
 {
   "include": [
     "src/**/*",
-    "index.d.ts", "ref/musig2.d.ts", // declaration file path
+    "index.d.ts",
+    "ref/musig2.d.ts", // declaration file path
   ],
   "compileOnSave": false,
   "compilerOptions": {
