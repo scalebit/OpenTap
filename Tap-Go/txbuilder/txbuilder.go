@@ -3,11 +3,12 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package opentap
+package txbuilder
 
 import (
 	"encoding/hex"
 	"fmt"
+	"opentap/rpc"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
@@ -213,12 +214,17 @@ func ExampleScriptTokenizer() {
 	// script contains 5 opcode(s)
 }
 
-func createTx(senderWallet, receiverWallet *Wallet, amount btcutil.Amount) (*wire.MsgTx, error) {
+func CreateTx(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, txhash *chainhash.Hash) (*wire.MsgTx, error) {
 	// 构造交易
 	tx := wire.NewMsgTx(wire.TxVersion)
 
 	// 获取未花费的 UTXO
-	prevTxID, err := getPrevTx(senderWallet)
+	// prevTxID, err := rpc.GetPrevTx(senderWallet)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	prevTxID, err := rpc.GetPrevTxByTxHash(txhash)
 	if err != nil {
 		return nil, err
 	}
@@ -240,8 +246,9 @@ func createTx(senderWallet, receiverWallet *Wallet, amount btcutil.Amount) (*wir
 	if err != nil {
 		return nil, err
 	}
-	txOut := wire.NewTxOut(int64(amount.ToBTC()), receiverScript)
+	txOut := wire.NewTxOut(int64(amount), receiverScript)
 	tx.AddTxOut(txOut)
 
+	// tx.TxIn[0].SignatureScript, _ = txscript.SignatureScript(tx, 0, []byte{}, txscript.SigHashDefault, senderWallet.PrivateKey.PrivKey, true)
 	return tx, nil
 }
