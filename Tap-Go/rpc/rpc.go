@@ -4,8 +4,10 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 )
 
@@ -24,24 +26,35 @@ var rpcConfig = &rpcclient.ConnConfig{
 	DisableTLS:   true,
 }
 
-func GetUTXOFromTx(txid *chainhash.Hash, address string) (*chainhash.Hash, int64, []byte, error) {
+func GetUTXOFromTx(txid *chainhash.Hash, address string) (*chainhash.Hash, int64, []byte, int, error) {
 	client, err := rpcclient.New(rpcConfig, nil)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, 0, err
 	}
 	defer client.Shutdown()
 
 	tx_res, err := client.GetRawTransaction(txid)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, 0, err
 	}
 
-	balance := tx_res.MsgTx().TxOut[0].Value
-	pubKeyScript := tx_res.MsgTx().TxOut[0].PkScript
+	regtest_params := chaincfg.RegressionNetParams
+	regtest_params.DefaultPort = "18443"
+	for i := 0; i < len(tx_res.MsgTx().TxOut); i++ {
+		balance := tx_res.MsgTx().TxOut[i].Value
+		pubKeyScript := tx_res.MsgTx().TxOut[i].PkScript
+		scriptClass, addrs, flag, err := txscript.ExtractPkScriptAddrs(pubKeyScript, &regtest_params)
+		if err != nil {
+			return nil, 0, nil, 0, err
+		}
 
-	//todo:判断address
+		if len(addrs) > 0 && addrs[0].EncodeAddress() == address {
+			fmt.Println("ExtractPkScriptAddrs:", scriptClass, addrs, flag)
+			return txid, balance, pubKeyScript, i, nil
+		}
+	}
 
-	return txid, balance, pubKeyScript, nil
+	return nil, 0, nil, 0, fmt.Errorf("No utxo exists for this address")
 }
 
 func GetPrevTxByTxHash(txhash *chainhash.Hash) (string, error) {
@@ -110,11 +123,12 @@ func GenerateBlock(wallet *Wallet) error {
 	// 	return err
 	// }
 
-	var maxTries int64 = 0
-	if _, err := client.GenerateToAddress(1, wallet.Address, &maxTries); err != nil {
+	var maxTries int64 = 5
+	var blockhash []*chainhash.Hash
+	if blockhash, err = client.GenerateToAddress(1, wallet.Address, &maxTries); err != nil {
 		return err
 	}
-
+	fmt.Println("blockhash:", blockhash)
 	return nil
 }
 

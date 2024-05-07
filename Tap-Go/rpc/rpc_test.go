@@ -10,13 +10,14 @@ import (
 
 func TestGetUTXOFromTx(t *testing.T) {
 	txhash, _ := chainhash.NewHashFromStr("729a0165bf2aaf3109d2a1214ba1161cee5dfaf90a02029a741c8a6dfaa33718")
-	txid, balance, pubKeyScript, err := rpc.GetUTXOFromTx(txhash, "")
+	txid, balance, pubKeyScript, index, err := rpc.GetUTXOFromTx(txhash, "")
 	if err != nil {
 		t.Error(err)
 	}
 	fmt.Println("txid:", txid)
 	fmt.Println("balance:", balance)
 	fmt.Println("pubKeyScript:", pubKeyScript)
+	fmt.Println("index:", index)
 
 	/*
 		=== RUN   TestGetUTXOFromTx
