@@ -1,76 +1,41 @@
-# **Tapscript Lib**
+# OpenTap-Nodejs
 
-Tapscript Lib is both a library and an integrated demo for tapscript developers. We wrapped the most commonly used tapscript as a module for developers. You can build taproot-related apps in a more easy way.
+This is the `node.js` version of OpenTap. Currently it cannot be directly install using the `npm` or `yarn` before we confirm. Nonetheless, you can find anything that useful for your project to claim. The structure of the project is shown below:
 
-Currently we are supporting `node.js` environment, `go` version is on the way.
+- Taproot: the basic function to build taproot transaction/address, and the RPC commend to interact with the Bitcoin network.
+- MultiSig: the function that related to build multi-sig tapscript, including the single-tapleaf, multi-tapleaf and musig solution, together with a `CHECKSEQUENCEVERIFY` style escape hatch.
+- Inscription: the function related to build/fetch/send/mint inscription, building in progress.
 
-## **Test Environment**
+## **Test**
 
-### Bitcoin Setup
+currently we have organized all the function in the `index.ts` for you to simply checkout how OpenTap works. We have build a integrated demo to shown how to build multi-sig taproot address and the unlocking mechanism.
 
-To run Bitcoin locally, we could use regtest network to easily test our lib. The following module is required to build regtest:
+```tsx
+    // Classic Multisig
+    // await bridge_unit(keypair)
 
-```jsx
-bitcoind
-bitcoin-cli
+    // Privacy Multisig
+    // await bridge_unit_mulit_leaf(keypair, 1)
+
+    // Workflow
+    // await bridge_workflow(keypair)
+
+    // Musig
+    // await start_musig_txbuilder()
+
+    // Create a Taproot Bridge
+    // await bridge_ceate_and_dump()
+
+    // Multisig pay
+    // await bridge_unlock_with_dump(1)
+
+    // Escape hatch
+    // await bridge_unlock_with_dump(2)
 ```
 
-We suggest getting them directly on the Bitcoin Core official site:
-
-[Bitcoin Core](https://bitcoin.org/en/bitcoin-core/)
-
-After installed the Bitcoin core, you should next setup the Bitcoin environment through `Bitcoin.conf`, which can be find at `./bitcoin-daemon/Config`. You need to manually put it into the right directory: 
-
-| Operating System | Data Directory | Example Path |
-| --- | --- | --- |
-| Windows | %APPDATA%\\Bitcoin\\ | C:\\Users\\username\\AppData\\Roaming\\Bitcoin\\bitcoin.conf |
-| Linux | $HOME/.bitcoin/ | /home/username/.bitcoin/bitcoin.conf |
-| macOS | $HOME/Library/Application Support/Bitcoin/ | /Users/username/Library/Application Support/Bitcoin/bitcoin.conf |
-
-To running the regtest network, using the command:
-
-```jsx
-bitcoind —regtest
-
-// Need to generate 101 block at the first tie
-bitcoin-cli 
-
-// Need to create wallet at the first time 
-bitcoin-cli -regtest createwallet testwallet_1
-
-// Need to load a wallet
-bitcoin-cli -regtest loadwallet main
-```
-
-### **Visualization**
-
-We leverage the `btc-rpc-explorer` to view the local regtest network. You need to install `node.js` in your local machine before using the explorer:
-
-[Github]https://github.com/janoside/btc-rpc-explorer
-
-To visualize the network, we need to first install and running `bitcoind`, and then setup the explorer environment. We suggested using `yarn` to install the `btc-rpc-explorer`.
-
-```jsx
-yarn install
-yarn start
-```
-
-Before `yarn start`, find the `.env-example` and set it to `.env`. Then we modified parts of the files as below, to point the RPC provider into the local regtest network.
-
-```
-# Bitcoin RPC Credentials (URI -OR- HOST/PORT/USER/PASS)
-# Defaults:
-#   - [host/port]: 127.0.0.1:8332
-#   - [username/password]: none
-#   - cookie: '~/.bitcoin/.cookie'
-#   - timeout: 5000 (ms)
-BTCEXP_BITCOIND_URI=bitcoin://user:pass@127.0.0.1:18443?timeout=10000
-BTCEXP_BITCOIND_HOST=127.0.0.1
-BTCEXP_BITCOIND_PORT=18443
-BTCEXP_BITCOIND_USER=user
-BTCEXP_BITCOIND_PASS=pass
-#BTCEXP_BITCOIND_COOKIE=/path/to/bitcoind/.cookie
-BTCEXP_BITCOIND_RPC_TIMEOUT=5000
-```
-
-You can simple enter http://127.0.0.1:3002/ in your browser to see the blockchain network.
+- bridge_unit: test the integrated multi-sig tapscript with single-leaf solution.
+- bridge_unit_mulit_leaf: test the integrated multi-sig tapscript with multi-leaf solution
+- bridge_workflow: test the complete workflow of how to build a tapscript and reedem the taproot address, especially made for understand the detail of taproot implementation.
+- start_musig_txbuilder: test the integrated multi-sig tapscript with musig solution.
+- bridge_create_and_dump:  create and dump the taproot setting into `.json`.
+- bridge_unlock_with_dump: unlock the dumped `.json` taproot address.

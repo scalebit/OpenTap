@@ -18,7 +18,7 @@ import { Buff } from '@cmdcode/buff'
 import { schnorr } from '@noble/curves/secp256k1'
 import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { toXOnly, tweakSigner, IUTXO, Config } from "./taproot/utils.js"
-import { asm_builder, asm_csv, } from "./bridge/taproot_builder.js"
+import { asm_builder, asm_csv, } from "./taproot/taproot_builder.js"
 import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "./bridge/bridge_builder.js"
 import * as fs from 'fs';
 
@@ -38,41 +38,20 @@ async function start() {
     // Privacy Multisig
     // await bridge_unit_mulit_leaf(keypair, 1)
 
-    // await start_p2pktr(keypair);
-    await start_musig_txbuilder()
+    // Workflow
+    // await bridge_workflow(keypair)
+
+    // Musig
+    // await start_musig_txbuilder()
 
     // Create a Taproot Bridge
-    // await bridge_ceate_and_dump()
+    // await bridge_create_and_dump()
 
-    // Musig pay
+    // Multisig pay
     // await bridge_unlock_with_dump(1)
 
     // Escape hatch
     // await bridge_unlock_with_dump(2)
-
-}
-
-async function test_case() {
-    // Random Pair
-    // const keypair = ECPair.makeRandom({ network });
-
-    // Stable Pair
-    const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network);
-    console.log("private key:", keypair.toWIF());
-
-    // Test bridge
-    await bridge_workflow(keypair);
-    await bridge_unit(keypair);
-
-    // Musig utils
-    test1();
-    test2();
-
-    // Basic taproot tx
-    await start_p2pktr(keypair);
-
-    // Musig tx
-    await start_musig_txbuilder();
 }
 
 // Basic test
@@ -263,11 +242,6 @@ async function bridge_workflow(keypair: Signer) {
     const leafScript = asm_builder(leafPubkeys, Threshold);
     const csvScript = asm_csv(Locktime, toXOnly(keypair.publicKey).toString('hex'))
 
-    // const leafScriptAsm1 = `${leafPubkeys[0]} OP_CHECKSIG ${leafPubkeys[1]} OP_CHECKSIGADD ${leafPubkeys[2]} OP_CHECKSIGADD OP_3 OP_NUMEQUAL`;
-    // console.log("normal:" + leafScriptAsm1)
-    // const leafScript1 = bitcoin.script.fromASM(leafScriptAsm1);
-    // console.log("normal:" + leafScript1)
-
     const scriptTree: Taptree = [
         {
             output: bitcoin.script.fromASM(
@@ -309,15 +283,10 @@ async function bridge_workflow(keypair: Signer) {
 
     const p2pktr_addr = p2pktr.address ?? "";
 
-    // const p2pktr_addr = "bcrt1pfu8cy8p9txxl66rmpc56784aq3tvdddayvzqgktx7gvkl45aqs9q6xsq3f";
-    // console.log('public key:', p2pktr.pubkey);
-
     console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`)
 
     let temp_trans = await pushTrans(p2pktr_addr)
     console.log("the new txid is:", temp_trans)
-
-    // await pushBlock(p2pktr_addr)
 
     const utxos = await getUTXOfromTx(temp_trans, p2pktr_addr)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
@@ -385,7 +354,7 @@ async function bridge_workflow(keypair: Signer) {
     }
     ///////////////////////////
 
-    // finalize and send out tx
+    // Finalize and send out tx
     psbt.finalizeAllInputs();
 
     const tx = psbt.extractTransaction();
@@ -487,7 +456,7 @@ async function bridge_unit_mulit_leaf(keypair: Signer, unlocker: number) {
     }
 }
 
-async function bridge_ceate_and_dump() {
+async function bridge_create_and_dump() {
     const config: Config = {
         internalKey: ECPair.makeRandom({ network }).toWIF(),
         Threshold: 2,

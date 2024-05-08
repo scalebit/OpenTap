@@ -52,15 +52,3 @@ function get_threshold_by_op(threshold: number) {
     }
     return asm
 }
-
-// export function asm_builder_multi_leaf(key: Signer, all_key: any[], threshold: number) {
-//     let leafScriptAsm: string = `${toXOnly(key.publicKey).toString('hex')} OP_CHECKSIG`;
-//     for (var i = 0; i < all_key.length; i++) {
-//         leafScriptAsm = leafScriptAsm + ` ` + `${all_key[i]} OP_CHECKSIGADD`
-//     }
-//     leafScriptAsm = (leafScriptAsm + ` ` + `${bitcoin.script.number.encode(threshold).toString('hex')}` + ` OP_GREATERTHANOREQUAL`).toString()
-//     console.log("asmbuilder:" + leafScriptAsm)
-//     const leafScript = bitcoin.script.fromASM(leafScriptAsm);
-//     return leafScript;
-// }
-

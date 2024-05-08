@@ -6,7 +6,7 @@ import * as bitcoin from 'bitcoinjs-lib';
 import { broadcast, pushBlock, pushTrans, getUTXOfromTx } from "../taproot/bitcoin_rpc.js";
 import { ECPairFactory, ECPairAPI } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
-import { asm_builder, asm_csv } from "./taproot_builder.js"
+import { asm_builder, asm_csv } from "../taproot/taproot_builder.js"
 import { toXOnly } from "../taproot/utils.js"
 import * as tinysecp from 'tiny-secp256k1'
 
