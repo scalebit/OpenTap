@@ -4,17 +4,12 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 )
-
-// Wallet 包含私钥、公钥和比特币地址
-type Wallet struct {
-	PrivateKey btcutil.WIF
-	PublicKey  btcutil.AddressPubKey
-	Address    btcutil.Address
-}
 
 var rpcConfig = &rpcclient.ConnConfig{
 	Host:         "localhost:18443",
@@ -24,24 +19,35 @@ var rpcConfig = &rpcclient.ConnConfig{
 	DisableTLS:   true,
 }
 
-func GetUTXOFromTx(txid *chainhash.Hash, address string) (*chainhash.Hash, int64, []byte, error) {
+func GetUTXOFromTx(txid *chainhash.Hash, address string) (*chainhash.Hash, int64, []byte, int, error) {
 	client, err := rpcclient.New(rpcConfig, nil)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, 0, err
 	}
 	defer client.Shutdown()
 
 	tx_res, err := client.GetRawTransaction(txid)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, 0, err
 	}
 
-	balance := tx_res.MsgTx().TxOut[0].Value
-	pubKeyScript := tx_res.MsgTx().TxOut[0].PkScript
+	regtest_params := chaincfg.RegressionNetParams
+	regtest_params.DefaultPort = "18443"
+	for i := 0; i < len(tx_res.MsgTx().TxOut); i++ {
+		balance := tx_res.MsgTx().TxOut[i].Value
+		pubKeyScript := tx_res.MsgTx().TxOut[i].PkScript
+		scriptClass, addrs, flag, err := txscript.ExtractPkScriptAddrs(pubKeyScript, &regtest_params)
+		if err != nil {
+			return nil, 0, nil, 0, err
+		}
 
-	//todo:判断address
+		if len(addrs) > 0 && addrs[0].EncodeAddress() == address {
+			fmt.Println("ExtractPkScriptAddrs:", scriptClass, addrs, flag)
+			return txid, balance, pubKeyScript, i, nil
+		}
+	}
 
-	return txid, balance, pubKeyScript, nil
+	return nil, 0, nil, 0, fmt.Errorf("No utxo exists for this address")
 }
 
 func GetPrevTxByTxHash(txhash *chainhash.Hash) (string, error) {
@@ -80,10 +86,6 @@ func GetPrevTx(wallet *Wallet) (string, error) {
 		return "", err
 	}
 
-	// for _, v := range utxos {
-	// 	fmt.Println("utxo:", v)
-	// }
-
 	// 如果找到未花费的 UTXO，则返回其交易 ID
 	if len(utxos) > 0 {
 		return utxos[0].TxID, nil
@@ -110,15 +112,16 @@ func GenerateBlock(wallet *Wallet) error {
 	// 	return err
 	// }
 
-	var maxTries int64 = 0
-	if _, err := client.GenerateToAddress(1, wallet.Address, &maxTries); err != nil {
+	var maxTries int64 = 5
+	var blockhash []*chainhash.Hash
+	if blockhash, err = client.GenerateToAddress(1, wallet.Address, &maxTries); err != nil {
 		return err
 	}
-
+	fmt.Println("blockhash:", blockhash)
 	return nil
 }
 
-func Faccut(wallet *Wallet, amount btcutil.Amount) (*chainhash.Hash, error) {
+func Faccut(address btcutil.Address, amount btcutil.Amount) (*chainhash.Hash, error) {
 	// 连接到 btcd RPC 服务器
 	client, err := rpcclient.New(rpcConfig, nil)
 	if err != nil {
@@ -132,11 +135,11 @@ func Faccut(wallet *Wallet, amount btcutil.Amount) (*chainhash.Hash, error) {
 	}
 
 	// 发送一定数量的比特币到钱包地址
-	txhash, err := client.SendToAddress(wallet.Address, amount)
+	txhash, err := client.SendToAddress(address, amount)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("address:", wallet.Address)
+	fmt.Println("address:", address)
 	return txhash, err
 }
 
