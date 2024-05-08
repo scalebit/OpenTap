@@ -214,34 +214,24 @@ func ExampleScriptTokenizer() {
 	// script contains 5 opcode(s)
 }
 
-func CreateTx(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, txhash *chainhash.Hash) (*wire.MsgTx, error) {
+// legacy tx
+func CreateTx(senderWallet *rpc.Wallet, receiverAddress btcutil.Address, amount btcutil.Amount, txhash *chainhash.Hash, gasfee int64) (*wire.MsgTx, error) {
 	// 构造交易
 	tx := wire.NewMsgTx(wire.TxVersion)
 
 	// 获取未花费的 UTXO
-	// prevTxID, err := rpc.GetPrevTx(senderWallet)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	prevTxID, err := rpc.GetPrevTxByTxHash(txhash)
+	prevTxID, balance, pubKeyScript, index, err := rpc.GetUTXOFromTx(txhash, senderWallet.Address.EncodeAddress())
 	if err != nil {
 		return nil, err
 	}
-
-	// 解码交易 ID
-	prevTxHash, err := chainhash.NewHashFromStr(prevTxID)
-	if err != nil {
-		return nil, err
-	}
+	fmt.Println("utxo:", prevTxID, balance, pubKeyScript)
 
 	// 构建交易输入
-	prevOut := wire.NewOutPoint(prevTxHash, 0) // 输出索引通常为 0
+	prevOut := wire.NewOutPoint(prevTxID, uint32(index)) // 输出索引通常为 0
 	txIn := wire.NewTxIn(prevOut, nil, nil)
 	tx.AddTxIn(txIn)
 
 	// 构建交易输出
-	receiverAddress := receiverWallet.Address
 	receiverScript, err := txscript.PayToAddrScript(receiverAddress)
 	if err != nil {
 		return nil, err
@@ -249,6 +239,81 @@ func CreateTx(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, t
 	txOut := wire.NewTxOut(int64(amount), receiverScript)
 	tx.AddTxOut(txOut)
 
-	// tx.TxIn[0].SignatureScript, _ = txscript.SignatureScript(tx, 0, []byte{}, txscript.SigHashDefault, senderWallet.PrivateKey.PrivKey, true)
+	//找零
+	changeAddress := senderWallet.Address
+	changeScript, err := txscript.PayToAddrScript(changeAddress)
+	if err != nil {
+		return nil, err
+	}
+	txChange := wire.NewTxOut(balance-int64(amount)-gasfee, changeScript)
+	tx.AddTxOut(txChange)
+
+	//签名
+	signature, err := txscript.SignatureScript(tx, 0, pubKeyScript, txscript.SigHashAll, senderWallet.PrivateKey.PrivKey, true)
+	if err != nil {
+		return nil, err
+	}
+	tx.TxIn[0].SignatureScript = signature
 	return tx, nil
+}
+
+func CreateTxP2TR(senderWallet *rpc.Wallet, receiverAddr btcutil.Address, amount btcutil.Amount, prevHash *chainhash.Hash, feeSat int64) (*wire.MsgTx, string, error) {
+	originTx := wire.NewMsgTx(2)
+
+	senderAddr, err := senderWallet.CreateP2TR()
+	if err != nil {
+		return nil, "", fmt.Errorf("fail createP2tr(prevAddr): %w", err)
+	}
+
+	// 获取未花费的 UTXO
+	prevTxID, balance, pubKeyScript, index, err := rpc.GetUTXOFromTx(prevHash, senderAddr)
+	if err != nil {
+		return nil, "", err
+	}
+	fmt.Println("utxo:", prevTxID, balance, pubKeyScript, index)
+
+	prevOutputFetcher := txscript.NewCannedPrevOutputFetcher(pubKeyScript, balance)
+	txinIndex := int(0)
+
+	sendPkScript, err := txscript.PayToAddrScript(receiverAddr)
+	if err != nil {
+		return nil, "", fmt.Errorf("fail PayToAddrScript(sendAddr): %w", err)
+	}
+
+	txOut := wire.NewTxOut(int64(amount), sendPkScript)
+	originTx.AddTxOut(txOut)
+
+	//找零
+	changeAddress, err := btcutil.DecodeAddress(senderAddr, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return nil, "", err
+	}
+	changeScript, err := txscript.PayToAddrScript(changeAddress)
+	if err != nil {
+		return nil, "", err
+	}
+	txChange := wire.NewTxOut(balance-int64(amount)-feeSat, changeScript)
+	originTx.AddTxOut(txChange)
+
+	prevOut := wire.NewOutPoint(prevHash, uint32(index))
+	txIn := wire.NewTxIn(prevOut, nil, nil)
+	originTx.AddTxIn(txIn)
+
+	sigHashes := txscript.NewTxSigHashes(originTx, prevOutputFetcher)
+	witness, err := txscript.TaprootWitnessSignature(
+		originTx,
+		sigHashes,
+		txinIndex,
+		balance,
+		pubKeyScript,
+		txscript.SigHashDefault,
+		senderWallet.PrivateKey.PrivKey,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("fail RawTxInWitnessSignature: %w", err)
+	}
+	txIn.Witness = witness
+
+	txid := originTx.TxHash()
+	return originTx, txid.String(), nil
 }
