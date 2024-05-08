@@ -11,13 +11,6 @@ import (
 	"github.com/btcsuite/btcd/wire"
 )
 
-// Wallet 包含私钥、公钥和比特币地址
-type Wallet struct {
-	PrivateKey btcutil.WIF
-	PublicKey  btcutil.AddressPubKey
-	Address    btcutil.Address
-}
-
 var rpcConfig = &rpcclient.ConnConfig{
 	Host:         "localhost:18443",
 	User:         "user",
@@ -93,10 +86,6 @@ func GetPrevTx(wallet *Wallet) (string, error) {
 		return "", err
 	}
 
-	// for _, v := range utxos {
-	// 	fmt.Println("utxo:", v)
-	// }
-
 	// 如果找到未花费的 UTXO，则返回其交易 ID
 	if len(utxos) > 0 {
 		return utxos[0].TxID, nil
@@ -132,7 +121,7 @@ func GenerateBlock(wallet *Wallet) error {
 	return nil
 }
 
-func Faccut(wallet *Wallet, amount btcutil.Amount) (*chainhash.Hash, error) {
+func Faccut(address btcutil.Address, amount btcutil.Amount) (*chainhash.Hash, error) {
 	// 连接到 btcd RPC 服务器
 	client, err := rpcclient.New(rpcConfig, nil)
 	if err != nil {
@@ -146,11 +135,11 @@ func Faccut(wallet *Wallet, amount btcutil.Amount) (*chainhash.Hash, error) {
 	}
 
 	// 发送一定数量的比特币到钱包地址
-	txhash, err := client.SendToAddress(wallet.Address, amount)
+	txhash, err := client.SendToAddress(address, amount)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("address:", wallet.Address)
+	fmt.Println("address:", address)
 	return txhash, err
 }
 

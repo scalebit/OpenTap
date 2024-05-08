@@ -258,3 +258,60 @@ func CreateTx(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, t
 	tx.TxIn[0].SignatureScript = signature
 	return tx, nil
 }
+
+func CreateTxP2TR(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, prevHash *chainhash.Hash, feeSat int64) (*wire.MsgTx, string, error) {
+	originTx := wire.NewMsgTx(2)
+
+	senderAddr, err := senderWallet.CreateP2TR()
+	if err != nil {
+		return nil, "", fmt.Errorf("fail createP2tr(prevAddr): %w", err)
+	}
+	receiverAddr, err := receiverWallet.CreateP2TR()
+	if err != nil {
+		return nil, "", fmt.Errorf("fail createP2tr(prevAddr): %w", err)
+	}
+
+	// 获取未花费的 UTXO
+	prevTxID, balance, pubKeyScript, index, err := rpc.GetUTXOFromTx(prevHash, senderAddr)
+	if err != nil {
+		return nil, "", err
+	}
+	fmt.Println("utxo:", prevTxID, balance, pubKeyScript, index)
+
+	prevOutputFetcher := txscript.NewCannedPrevOutputFetcher(pubKeyScript, balance)
+	txinIndex := int(0)
+
+	receiver_addr, err := btcutil.DecodeAddress(receiverAddr, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return nil, "", fmt.Errorf("fail DecodeAddress(sendAddr): %w", err)
+	}
+	sendPkScript, err := txscript.PayToAddrScript(receiver_addr)
+	if err != nil {
+		return nil, "", fmt.Errorf("fail PayToAddrScript(sendAddr): %w", err)
+	}
+	sendAmountSat := balance - feeSat
+	txOut := wire.NewTxOut(sendAmountSat, sendPkScript)
+	originTx.AddTxOut(txOut)
+
+	prevOut := wire.NewOutPoint(prevHash, uint32(index))
+	txIn := wire.NewTxIn(prevOut, nil, nil)
+	originTx.AddTxIn(txIn)
+
+	sigHashes := txscript.NewTxSigHashes(originTx, prevOutputFetcher)
+	witness, err := txscript.TaprootWitnessSignature(
+		originTx,
+		sigHashes,
+		txinIndex,
+		balance,
+		pubKeyScript,
+		txscript.SigHashDefault,
+		senderWallet.PrivateKey.PrivKey,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("fail RawTxInWitnessSignature: %w", err)
+	}
+	txIn.Witness = witness
+
+	txid := originTx.TxHash()
+	return originTx, txid.String(), nil
+}

@@ -39,8 +39,8 @@ func NewWallet(para *chaincfg.Params) (*rpc.Wallet, error) {
 	return wallet, nil
 }
 
-func LoadWallet(para *chaincfg.Params) (*rpc.Wallet, error) {
-	privKeyBytes, err := hex.DecodeString("2ff6778392d7dc64037ab85a2cc40dfebc8ce2893d6c8b1e0332b6fb08744fe8")
+func LoadWallet(privkey string, para *chaincfg.Params) (*rpc.Wallet, error) {
+	privKeyBytes, err := hex.DecodeString(privkey)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
