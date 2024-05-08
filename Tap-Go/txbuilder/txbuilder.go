@@ -215,7 +215,7 @@ func ExampleScriptTokenizer() {
 }
 
 // legacy tx
-func CreateTx(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, txhash *chainhash.Hash) (*wire.MsgTx, error) {
+func CreateTx(senderWallet *rpc.Wallet, receiverAddress btcutil.Address, amount btcutil.Amount, txhash *chainhash.Hash, gasfee int64) (*wire.MsgTx, error) {
 	// 构造交易
 	tx := wire.NewMsgTx(wire.TxVersion)
 
@@ -232,7 +232,6 @@ func CreateTx(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, t
 	tx.AddTxIn(txIn)
 
 	// 构建交易输出
-	receiverAddress := receiverWallet.Address
 	receiverScript, err := txscript.PayToAddrScript(receiverAddress)
 	if err != nil {
 		return nil, err
@@ -246,7 +245,6 @@ func CreateTx(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, t
 	if err != nil {
 		return nil, err
 	}
-	var gasfee int64 = 500
 	txChange := wire.NewTxOut(balance-int64(amount)-gasfee, changeScript)
 	tx.AddTxOut(txChange)
 
@@ -259,14 +257,10 @@ func CreateTx(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, t
 	return tx, nil
 }
 
-func CreateTxP2TR(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amount, prevHash *chainhash.Hash, feeSat int64) (*wire.MsgTx, string, error) {
+func CreateTxP2TR(senderWallet *rpc.Wallet, receiverAddr btcutil.Address, amount btcutil.Amount, prevHash *chainhash.Hash, feeSat int64) (*wire.MsgTx, string, error) {
 	originTx := wire.NewMsgTx(2)
 
 	senderAddr, err := senderWallet.CreateP2TR()
-	if err != nil {
-		return nil, "", fmt.Errorf("fail createP2tr(prevAddr): %w", err)
-	}
-	receiverAddr, err := receiverWallet.CreateP2TR()
 	if err != nil {
 		return nil, "", fmt.Errorf("fail createP2tr(prevAddr): %w", err)
 	}
@@ -281,17 +275,25 @@ func CreateTxP2TR(senderWallet, receiverWallet *rpc.Wallet, amount btcutil.Amoun
 	prevOutputFetcher := txscript.NewCannedPrevOutputFetcher(pubKeyScript, balance)
 	txinIndex := int(0)
 
-	receiver_addr, err := btcutil.DecodeAddress(receiverAddr, &chaincfg.RegressionNetParams)
-	if err != nil {
-		return nil, "", fmt.Errorf("fail DecodeAddress(sendAddr): %w", err)
-	}
-	sendPkScript, err := txscript.PayToAddrScript(receiver_addr)
+	sendPkScript, err := txscript.PayToAddrScript(receiverAddr)
 	if err != nil {
 		return nil, "", fmt.Errorf("fail PayToAddrScript(sendAddr): %w", err)
 	}
-	sendAmountSat := balance - feeSat
-	txOut := wire.NewTxOut(sendAmountSat, sendPkScript)
+
+	txOut := wire.NewTxOut(int64(amount), sendPkScript)
 	originTx.AddTxOut(txOut)
+
+	//找零
+	changeAddress, err := btcutil.DecodeAddress(senderAddr, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return nil, "", err
+	}
+	changeScript, err := txscript.PayToAddrScript(changeAddress)
+	if err != nil {
+		return nil, "", err
+	}
+	txChange := wire.NewTxOut(balance-int64(amount)-feeSat, changeScript)
+	originTx.AddTxOut(txChange)
 
 	prevOut := wire.NewOutPoint(prevHash, uint32(index))
 	txIn := wire.NewTxIn(prevOut, nil, nil)

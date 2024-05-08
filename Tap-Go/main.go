@@ -39,7 +39,8 @@ func start_p2pkh() {
 
 	// 构建一笔交易，将一部分比特币发送给第二个钱包地址
 	amountToSend := btcutil.Amount(500000) // 0.005 BTC
-	tx, err := txbuilder.CreateTx(senderWallet, receiverWallet, amountToSend, txhash)
+	gasfee := int64(500)
+	tx, err := txbuilder.CreateTx(senderWallet, receiverWallet.Address, amountToSend, txhash, gasfee)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -81,16 +82,22 @@ func start_p2tr() {
 		log.Fatal(err)
 	}
 
-	receiver_p2tr_addr, err := receiverWallet.CreateP2TR()
+	receiver_p2tr_addr_str, err := receiverWallet.CreateP2TR()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	fmt.Println("receiver_p2tr_addr:", receiver_p2tr_addr)
+	fmt.Println("receiver_p2tr_addr:", receiver_p2tr_addr_str)
 
 	sender_p2tr_addr, err := btcutil.DecodeAddress(sender_p2tr_addr_str, &chaincfg.RegressionNetParams)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	receiver_p2tr_addr, err := btcutil.DecodeAddress(receiver_p2tr_addr_str, &chaincfg.RegressionNetParams)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// 向第一个钱包地址添加一定数量的比特币
 	txhash, err := rpc.Faccut(sender_p2tr_addr, btcutil.Amount(2000000))
 	if err != nil {
@@ -100,9 +107,9 @@ func start_p2tr() {
 	fmt.Println("faccut txhash:", txhash)
 
 	// 构建一笔交易，将一部分比特币发送给第二个钱包地址
-	// rawTx, txid, err := senderWallet.CreateRawTxP2TR(txhash, receiver_p2tr_addr, 500)
 	amountToSend := btcutil.Amount(500000) // 0.005 BTC
-	rawTx, txid, err := txbuilder.CreateTxP2TR(senderWallet, receiverWallet, amountToSend, txhash, 500)
+	gasfee := int64(500)
+	rawTx, txid, err := txbuilder.CreateTxP2TR(senderWallet, receiver_p2tr_addr, amountToSend, txhash, gasfee)
 	if err != nil {
 		fmt.Printf("fail CreateRawTxP2TR: %v\n", err)
 		return
@@ -124,6 +131,6 @@ func start_p2tr() {
 }
 
 func main() {
-	// start_p2pkh()
-	start_p2tr()
+	start_p2pkh()
+	// start_p2tr()
 }
