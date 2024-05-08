@@ -4,7 +4,6 @@
     "index.d.ts",
     "ref/musig2.d.ts", // declaration file path
   ],
-  "compileOnSave": false,
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
     /* Projects */
@@ -98,7 +97,6 @@
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     // "skipLibCheck": true                              /* Skip type checking all .d.ts files. */
     "typeRoots": [
-      "src",
       "node_modules/@types"
     ]
   }

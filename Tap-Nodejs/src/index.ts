@@ -9,17 +9,17 @@ import {
     Transaction,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "./RPC.js";
+import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "./taproot/bitcoin_rpc.js";
 import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
-import { test1, test2, get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "./musig_process.js"
+import { test1, test2, get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "./bridge/musig_process.js"
 import * as tinysecp from 'tiny-secp256k1'
 import { Buff } from '@cmdcode/buff'
 import { schnorr } from '@noble/curves/secp256k1'
 import { regtest } from "bitcoinjs-lib/src/networks.js";
-import { toXOnly, tweakSigner, IUTXO, Config } from "./utils.js"
-import { asm_builder, asm_csv, } from "./taproot_builder.js"
-import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "./bridge_builder.js"
+import { toXOnly, tweakSigner, IUTXO, Config } from "./taproot/utils.js"
+import { asm_builder, asm_csv, } from "./bridge/taproot_builder.js"
+import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "./bridge/bridge_builder.js"
 import * as fs from 'fs';
 
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');

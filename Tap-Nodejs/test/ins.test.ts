@@ -1,5 +1,5 @@
 import { describe, it } from "node:test";
-import * as ins from "../src/get_inscription";
+import * as ins from "../src/inscription/get_inscription";
 import * as should from "should";
 
 
