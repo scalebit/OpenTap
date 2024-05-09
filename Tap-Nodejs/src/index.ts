@@ -66,10 +66,7 @@ async function start_p2pktr(keypair: Signer) {
         network
     });
     const p2pktr_addr = p2pktr.address ?? "";
-
-    // const p2pktr_addr = "bcrt1pfu8cy8p9txxl66rmpc56784aq3tvdddayvzqgktx7gvkl45aqs9q6xsq3f";
-    // console.log('public key:', p2pktr.pubkey);
-
+    
     console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`)
 
     let temp_trans = await pushTrans(p2pktr_addr)
@@ -77,10 +74,6 @@ async function start_p2pktr(keypair: Signer) {
 
     await pushBlock(p2pktr_addr)
 
-    // OP1 Wait for UTXO
-    // const utxos = await waitUntilUTXO(p2pktr_addr)
-
-    // OP 2 We directly use RawTransaction instead
     const utxos = await getUTXOfromTx(temp_trans, p2pktr_addr)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
 
@@ -92,8 +85,6 @@ async function start_p2pktr(keypair: Signer) {
         tapInternalKey: toXOnly(keypair.publicKey)
     });
 
-    // utxos.value
-
     psbt.addOutput({
         address: "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", // main wallet address 
         value: utxos.value - 150
@@ -101,28 +92,6 @@ async function start_p2pktr(keypair: Signer) {
 
     // Auto-Sign
     psbt.signInput(0, tweakedSigner);
-
-    // Comp-Sign
-    // const psbtInput = psbt.data.inputs[0];
-    // // Construct the transaction
-    // const transaction = new Transaction();
-    // transaction.version = 1; // Set the version number of the transaction
-    // // // Add the input to the transaction
-    // // transaction.addInput(psbtInput.hash, psbtInput.index, psbtInput.sequence);
-    // // // Add the witness UTXO to the input
-    // // transaction.setInputScript(0, psbtInput.witnessUtxo.script);
-    // // // Calculate the sighash for the input
-    // const hashType = Transaction.SIGHASH_ALL;
-    // const signatureHash = transaction.hashForSignature(0, p2pktr.pubkey!, hashType);
-    // console.log(signatureHash)
-    // // Sign the signature hash
-
-    // let msg = psbt.gettaproothash(0, toXOnly(keypair.publicKey))
-    // const sign = tweakedSigner.sign(msg);
-    // // Get the DER-encoded signature
-    // // const derSignature = signature.toDER();
-    // let tapKeySig = Buffer.from(sign)
-    // psbt.updateInput(0, { tapKeySig })
 
     psbt.finalizeAllInputs();
 

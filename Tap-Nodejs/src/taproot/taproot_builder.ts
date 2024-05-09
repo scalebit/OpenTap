@@ -3,8 +3,11 @@ import {
     networks,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { ECPairFactory, ECPairAPI } from 'ecpair';
+import { Taptree } from "bitcoinjs-lib/src/types";
+import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
 import * as tinysecp from 'tiny-secp256k1'
+import { toXOnly, tweakSigner } from "./utils";
+import { regtest } from "bitcoinjs-lib/src/networks";
 
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
@@ -12,9 +15,32 @@ const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 const network = networks.regtest;
 const LEAF_VERSION_TAPSCRIPT = 192;
 
-export function multisig_taptree(all_key: any[], threshold: number) {
-    // all_key length must > 2
+export function taproot_address_from_asm(asm: string, keypair: bitcoin.Signer): { p2tr: bitcoin.payments.Payment, redeem: any } {
+    const scriptTree: Taptree = [
+        {
+            output: bitcoin.script.fromASM(asm)
+        },
+        {
+            output: bitcoin.script.fromASM(keypair.publicKey.toString('hex') + ' OP_CHECKSIG')
+        }
+    ];
 
+    const redeem = {
+        output: bitcoin.script.fromASM(asm),
+        redeemVersion: LEAF_VERSION_TAPSCRIPT,
+    };
+
+    const p2tr = bitcoin.payments.p2tr({
+        internalPubkey: toXOnly(keypair.publicKey),
+        scriptTree,
+        redeem,
+        network: regtest,
+    });
+
+    return {
+        p2tr,
+        redeem
+    };
 }
 
 export function asm_csv(rel_time: number, pubKey: any) {
