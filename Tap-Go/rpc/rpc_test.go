@@ -6,7 +6,6 @@ import (
 	"opentap/utils"
 	"testing"
 
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
@@ -31,8 +30,7 @@ func TestGetUTXOFromTx(t *testing.T) {
 }
 
 func TestCreateP2TR(t *testing.T) {
-	regtest_params := chaincfg.RegressionNetParams
-	regtest_params.DefaultPort = "18443"
+	regtest_params := rpc.Regtest_params
 	wallet1, err := utils.LoadWallet("2ff6778392d7dc64037ab85a2cc40dfebc8ce2893d6c8b1e0332b6fb08744fe8", &regtest_params)
 	if err != nil {
 		t.Error(err)

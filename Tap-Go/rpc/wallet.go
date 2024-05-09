@@ -29,3 +29,7 @@ func (w *Wallet) createP2TR() (*btcutil.AddressTaproot, error) {
 	witnessProg := schnorr.SerializePubKey(pubKey)
 	return btcutil.NewAddressTaproot(witnessProg, &chaincfg.RegressionNetParams)
 }
+
+func (w *Wallet) SerializeSchnorrPubKey() []byte {
+	return schnorr.SerializePubKey(w.PublicKey.PubKey())
+}

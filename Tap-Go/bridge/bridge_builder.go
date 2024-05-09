@@ -39,7 +39,7 @@ func GetTaprootBridge(keypair *rpc.Wallet, keys []*rpc.Wallet, keynum int, thres
 	pk, _ := btcec.ParsePubKey([]byte(keypair.PublicKey.String()))
 	p2pktr, _ := txscript.PayToTaprootScript(pk)
 
-	temp_trans, _ := rpc.Faccut(keypair.Address, btcutil.Amount(2000000))
+	temp_trans, _ := rpc.Faucet(keypair.Address, btcutil.Amount(2000000))
 	fmt.Println("The new txid is:", temp_trans)
 
 	p2csvtr, _ := txscript.PayToTaprootScript(pk)
