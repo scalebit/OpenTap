@@ -5,6 +5,20 @@ import { IUTXO } from "./utils.js"
 
 const URL = `http://user:pass@127.0.0.1:18443/`
 
+export async function txBroadcastVeify(psbt: any, addr: string) {
+    psbt.finalizeAllInputs();
+
+    const tx = psbt.extractTransaction();
+    console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
+    console.log("Txid is:", tx.getId());
+
+    const txHex = await broadcast(tx.toHex());
+    console.log(`Success! TxHex is ${txHex}`);
+
+    let tx_verify = await getUTXOfromTx(tx.getId(), addr)
+    console.log(`Get UTXO ${tx_verify}`);
+}
+
 export async function pushBlock(address: string) {
     return new Promise<string>((resolve, reject) => {
         let addr_to = address
