@@ -6,6 +6,7 @@ Tap-Go is a Golang-based repository that facilitates the construction and sendin
 
 - **P2PKH Support:** Construct and send transactions to legacy addresses.
 - **P2TR Support:** Construct and send transactions to Taproot addresses.
+- **Script Path Support:** Unlock UTXO using redeem scripts based on script paths in Taproot.
 
 
 ### Usage
