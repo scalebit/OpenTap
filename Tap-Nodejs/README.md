@@ -6,7 +6,7 @@ This is the `node.js` version of OpenTap. Currently it cannot be directly instal
 - MultiSig: the function that related to build multi-sig tapscript, including the single-tapleaf, multi-tapleaf and musig solution, together with a `CHECKSEQUENCEVERIFY` style escape hatch.
 - Inscription: the function related to build/fetch/send/mint inscription, building in progress.
 
-## **Test**
+## **index.js**
 
 currently we have organized all the function in the `index.ts` for you to simply checkout how OpenTap works. We have build a integrated demo to shown how to build multi-sig taproot address and the unlocking mechanism.
 
@@ -39,3 +39,7 @@ currently we have organized all the function in the `index.ts` for you to simply
 - start_musig_txbuilder: test the integrated multi-sig tapscript with musig solution.
 - bridge_create_and_dump:  create and dump the taproot setting into `.json`.
 - bridge_unlock_with_dump: unlock the dumped `.json` taproot address.
+
+## **test**
+
+We are currently working on mocha test.
