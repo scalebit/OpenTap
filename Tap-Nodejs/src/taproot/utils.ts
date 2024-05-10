@@ -7,7 +7,6 @@ import * as bitcoin from 'bitcoinjs-lib';
 import { ECPairFactory, ECPairAPI } from 'ecpair';
 import varuint from "varuint-bitcoin";
 import * as tinysecp from 'tiny-secp256k1'
-import exp from "constants";
 
 initEccLib(tinysecp as any);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);

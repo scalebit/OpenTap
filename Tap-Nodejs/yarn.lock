@@ -219,6 +219,11 @@ bech32@^2.0.0:
   resolved "https://registry.npmjs.org/bech32/-/bech32-2.0.0.tgz"
   integrity sha512-LcknSilhIGatDAsY1ak2I8VtGaHNhgMSYVxFrGLXv+xLHytaKZKcaUJJUE7qmBr7h33o5YQwP55pMI0xmkpJwg==
 
+big-varuint-js@^0.2.1:
+  version "0.2.1"
+  resolved "https://registry.npmmirror.com/big-varuint-js/-/big-varuint-js-0.2.1.tgz#b4c5d9e92b061919465ebb4f66057eebd873231a"
+  integrity sha512-79JS5h53rP+L2CyXbpgMaLPKyHek7VAglJbug3KWR3CBtBabkcvxaU0PSMTBP9jBhDYoJsz5f+Ow20XSp8n52A==
+
 bigi@^1.1.0, bigi@^1.4.2:
   version "1.4.2"
   resolved "https://registry.npmjs.org/bigi/-/bigi-1.4.2.tgz"
@@ -836,6 +841,13 @@ ripemd160@^2.0.1:
   dependencies:
     hash-base "^3.0.0"
     inherits "^2.0.1"
+
+runestone-js@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.npmmirror.com/runestone-js/-/runestone-js-0.3.0.tgz#4fbfad7114327078e8f3adb65fafcf99621593b4"
+  integrity sha512-8ddhFrIZ/H1zKJ5HcSWsFabexunF4Dk7odjJQFy92ZZ+3Oxicf/VndZdP1pnPu4y2R54ZO3rP2tkPtrQgqFhxA==
+  dependencies:
+    big-varuint-js "^0.2.1"
 
 safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@^5.2.1, safe-buffer@~5.2.0:
   version "5.2.1"

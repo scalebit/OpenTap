@@ -41,9 +41,9 @@ export async function pushBlock(address: string) {
     })
 }
 
-export async function pushTrans(address: string) {
+export async function pushTrans(address: string, amt?: number) {
     return new Promise<string>((resolve, reject) => {
-        let amount = 0.2
+        let amount = amt ?? 0.2
         let addr_to = address
         const data = {
             jsonrpc: "2.0",

@@ -9,10 +9,10 @@ import {
     Transaction,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, waitUntilUTXO, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "./taproot/bitcoin_rpc.js";
-import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
+import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "./taproot/bitcoin_rpc.js";
+import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
-import { test1, test2, get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "./bridge/musig_process.js"
+import { get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "./bridge/musig_process.js"
 import * as tinysecp from 'tiny-secp256k1'
 import { Buff } from '@cmdcode/buff'
 import { schnorr } from '@noble/curves/secp256k1'
@@ -66,7 +66,7 @@ async function start_p2pktr(keypair: Signer) {
         network
     });
     const p2pktr_addr = p2pktr.address ?? "";
-    
+
     console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`)
 
     let temp_trans = await pushTrans(p2pktr_addr)

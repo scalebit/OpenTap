@@ -15,10 +15,10 @@ const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 const network = networks.regtest;
 const LEAF_VERSION_TAPSCRIPT = 192;
 
-export function taproot_address_from_asm(asm: string, keypair: bitcoin.Signer): { p2tr: bitcoin.payments.Payment, redeem: any } {
+export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): { p2tr: bitcoin.payments.Payment, redeem: any } {
     const scriptTree: Taptree = [
         {
-            output: bitcoin.script.fromASM(asm)
+            output: asm
         },
         {
             output: bitcoin.script.fromASM(keypair.publicKey.toString('hex') + ' OP_CHECKSIG')
@@ -26,7 +26,7 @@ export function taproot_address_from_asm(asm: string, keypair: bitcoin.Signer): 
     ];
 
     const redeem = {
-        output: bitcoin.script.fromASM(asm),
+        output: asm,
         redeemVersion: LEAF_VERSION_TAPSCRIPT,
     };
 

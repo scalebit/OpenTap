@@ -1,30 +1,28 @@
-import axios, { AxiosResponse } from "axios";
-import { IUTXO } from "../taproot/utils.js"
-import { ECKeyPairKeyObjectOptions } from "crypto";
-import { ECPairFactory, ECPairAPI, TinySecp256k1Interface, ECPairInterface } from 'ecpair';
+import axios from "axios";
 import { taproot_address_from_asm } from "../taproot/taproot_builder.js";
-import { broadcast, getUTXOfromTx, pushTrans, txBroadcastVeify } from "../taproot/bitcoin_rpc.js";
+import { getUTXOfromTx, txBroadcastVeify } from "../taproot/bitcoin_rpc.js";
 import { regtest } from "bitcoinjs-lib/src/networks.js";
-import { Signer } from "bitcoinjs-lib";
+import { opcodes, Signer, script } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
+import { toXOnly } from "../taproot/utils.js";
 
 const URL = `https://turbo.ordinalswallet.com`
 const network = { network: regtest };
 
 export async function ins_create(keypair: Signer, p: string, data: string, txid: string) {
-    const script =
-        keypair.publicKey.toString('hex') +
-        ' OP_CHECKSIG' +
-        ' OP_0' +
-        ' OP_IF ' +
-        p +
-        ' 01' +
-        ' text/plain;charset=utf-8' +
-        ' OP_0 ' +
-        data +
-        ' OP_ENDIF'
-        ;
-    let { p2tr, redeem } = taproot_address_from_asm(script, keypair)
+    const ins_script = [
+        toXOnly(keypair.publicKey),
+        opcodes.OP_CHECKSIG,
+        opcodes.OP_0,
+        opcodes.OP_IF,
+        Buffer.from(p),
+        1,
+        Buffer.from('text/plain;charset=utf-8'),
+        opcodes.OP_0,
+        Buffer.from(data),
+        opcodes.OP_ENDIF
+    ];
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
     let addr = p2tr.address ?? "";
 
     const utxos = await getUTXOfromTx(txid, addr)
