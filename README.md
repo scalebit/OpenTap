@@ -62,7 +62,7 @@ bitcoin-cli -regtest loadwallet main
 
 We leverage the `btc-rpc-explorer` to view the local regtest network. You need to install `node.js` in your local machine before using the explorer:
 
-[Github]https://github.com/janoside/btc-rpc-explorer
+[Github](https://github.com/janoside/btc-rpc-explorer)
 
 To visualize the network, we need to first install and running `bitcoind`, and then setup the explorer environment. We suggested using `yarn` to install the `btc-rpc-explorer`.
 
