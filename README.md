@@ -7,15 +7,15 @@ Currently we are supporting `node.js` environment, `go` version is on the way. T
 - [x]  Taproot Builder - Easily to create a taproot address/wallet
 - [x]  Script (ASM) Builder - Build Bitcoin raw script by opcode
 - [x]  Multi-Sig Builder - Build Multi-Sig script and signing
-- [x]  Inscription Builder - Build basic inscription and inscribe
+- [x]  Inscription Builder - Build basic Brc20/Rune/Inscription
 - [x]  RPC/API - Module used to get/post data to RPC/API
 - [x]  Bridge L1 Demo - A integrated demo that build multi-sig bridge in L1
 
 And we are working on:
 
-- [ ]  Brc20/Rune - Fully support/demo the inscribe, brc-20, rune operation
-- [ ]  Bridge with Custody Demo - A full assets bridge demo
-- [ ]  BitVM - Taproot address/script based on BitVM
+- [ ]  Assets - Fully support Bitcoin native assets
+- [ ]  Bridge with Custody - A full implementation of assets bridge
+- [ ]  BitVM - Tapscript based on BitVM (and BitVM improvment)
 - [ ]  Go - Fully supported go language
 
 **DISCLAIMER: We haven’t finished our inside auditing yet, so use it at your own risk before we fully confirm the source code.**
