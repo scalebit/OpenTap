@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"opentap/bridge"
 	"opentap/rpc"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -19,7 +20,30 @@ var (
 	paymentHash = sha256.Sum256(preimage)
 )
 
-func CreateScript(pubkeyA []byte, pubkeyB []byte) [][]byte {
+func CreateScriptMutiSig(pubkeys [][]byte, threshold int, locktime int64) ([][]byte, error) {
+	//多签脚本
+	script1, err := bridge.AsmBuilder(pubkeys, threshold)
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, err
+	}
+
+	//时间锁脚本
+	script2, err := bridge.AsmCsv(locktime, pubkeys[0])
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, err
+	}
+
+	script1_str, _ := txscript.DisasmString(script1)
+	fmt.Println("script3:", script1_str)
+	script2_str, _ := txscript.DisasmString(script2)
+	fmt.Println("script4:", script2_str)
+
+	return [][]byte{script1, script2}, nil
+}
+
+func CreateScriptHashLock(pubkeyA []byte, pubkeyB []byte) [][]byte {
 	const (
 		OP_IF          = 0x63
 		OP_ELSE        = 0x67

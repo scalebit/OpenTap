@@ -3,7 +3,6 @@ package bridge
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/txscript"
@@ -48,7 +47,7 @@ func TestAsmBuilder(t *testing.T) {
 }
 
 func TestAsmCsv(t *testing.T) {
-	wifStr1 := "cQpHXfs91s5eR9PWXui6qo2xjoJb2X3VdUspwKXe4A8Dybvut2rL"
+	wifStr1 := "cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7"
 	wif1, err := btcutil.DecodeWIF(wifStr1)
 	if err != nil {
 		t.Error(err)
@@ -56,8 +55,9 @@ func TestAsmCsv(t *testing.T) {
 	// public key extracted from wif.PrivKey
 	pk1 := wif1.PrivKey.PubKey().SerializeCompressed()
 
-	relTime := time.Now().Unix()
+	relTime := int64(1)
 	script, err := AsmCsv(relTime, pk1)
+	fmt.Println(script)
 	if err != nil {
 		fmt.Println(err.Error())
 		t.Error(err)

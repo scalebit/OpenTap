@@ -9,6 +9,21 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
+func TestCreateScriptMutiSig(t *testing.T) {
+	wallet1, err := utils.LoadWallet("2ff6778392d7dc64037ab85a2cc40dfebc8ce2893d6c8b1e0332b6fb08744fe8", &chaincfg.RegressionNetParams)
+	if err != nil {
+		t.Error(err)
+	}
+	wallet2, err := utils.LoadWallet("3fe069f9c7cae96daf359f2e08bea43979c9a2d87325fffde261163378e33d15", &chaincfg.RegressionNetParams)
+	if err != nil {
+		t.Error(err)
+	}
+
+	publickeys := [][]byte{wallet1.SerializeSchnorrPubKey(), wallet2.SerializeSchnorrPubKey()}
+	scripts, _ := CreateScriptMutiSig(publickeys, len(publickeys), 15)
+	fmt.Println(scripts)
+}
+
 func TestCreateScript(t *testing.T) {
 	wallet1, err := utils.LoadWallet("2ff6778392d7dc64037ab85a2cc40dfebc8ce2893d6c8b1e0332b6fb08744fe8", &chaincfg.RegressionNetParams)
 	if err != nil {
@@ -18,7 +33,7 @@ func TestCreateScript(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	scripts := CreateScript(wallet1.SerializeSchnorrPubKey(), wallet2.SerializeSchnorrPubKey())
+	scripts := CreateScriptHashLock(wallet1.SerializeSchnorrPubKey(), wallet2.SerializeSchnorrPubKey())
 	fmt.Println(scripts)
 
 	ts := NewTapScript(wallet2, scripts, &chaincfg.RegressionNetParams)
@@ -45,6 +60,7 @@ func TestCreateScript(t *testing.T) {
 		0, // script1 = scripts[0]
 		[][]byte{preimage},
 		wallet1,
+		0,
 	)
 	if err != nil {
 		t.Error(err)

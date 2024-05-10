@@ -133,6 +133,10 @@ func start_p2tr_keypath() {
 
 // pay to taproot address scriptpath
 func start_p2tr_scriptpath(redeem_script_index int) {
+	const KeyNum = 10         //多签公钥数量
+	const locktime = int64(5) //锁定时间
+	const threshold = 5       //门限数量
+
 	regtest_params := rpc.Regtest_params
 	// 生成第一个钱包
 	senderWallet, err := utils.LoadWallet("2ff6778392d7dc64037ab85a2cc40dfebc8ce2893d6c8b1e0332b6fb08744fe8", &regtest_params)
@@ -174,8 +178,24 @@ func start_p2tr_scriptpath(redeem_script_index int) {
 	amountToSend := btcutil.Amount(500000) // 0.005 BTC
 	gasfee := int64(500)
 
-	//生成taproot script 切片
-	scripts := txbuilder.CreateScript(senderWallet.SerializeSchnorrPubKey(), receiverWallet.SerializeSchnorrPubKey())
+	//哈希锁脚本
+	scripts := txbuilder.CreateScriptHashLock(senderWallet.SerializeSchnorrPubKey(), receiverWallet.SerializeSchnorrPubKey())
+	//多签与时间锁脚本
+	var multiSigWallets []*rpc.Wallet
+	publickeys := [][]byte{}
+
+	//生成KeyNum个钱包 参与多签
+	for i := 0; i < KeyNum; i++ {
+		multiSigWallet, err := utils.NewWallet(&regtest_params)
+		if err != nil {
+			log.Fatal(err)
+		}
+		multiSigWallets = append(multiSigWallets, multiSigWallet)
+		publickeys = append(publickeys, multiSigWallet.SerializeSchnorrPubKey())
+	}
+	//构建多签脚本
+	scripts_MutSig, _ := txbuilder.CreateScriptMutiSig(publickeys, threshold, locktime)
+	scripts = append(scripts, scripts_MutSig...)
 	ts := txbuilder.NewTapScript(senderWallet, scripts, &chaincfg.RegressionNetParams)
 	//生成taproot tree 并返回 pk
 	p2tr_script_PK, err := ts.CreateP2trPK()
@@ -212,9 +232,10 @@ func start_p2tr_scriptpath(redeem_script_index int) {
 			// current output
 			sender_p2tr_addr_str, gasfee,
 			// unlock
-			redeem_script_index, // script1 = scripts[0]
+			redeem_script_index,
 			[][]byte{preimage},
 			senderWallet,
+			wire.MaxTxInSequenceNum,
 		)
 	case 1:
 		tx2, txid2, err = ts.CreateRawTxP2TR(
@@ -223,9 +244,51 @@ func start_p2tr_scriptpath(redeem_script_index int) {
 			// current output
 			sender_p2tr_addr_str, gasfee,
 			// unlock
-			redeem_script_index, // script2 = scripts[1]
+			redeem_script_index,
 			[][]byte{},
 			receiverWallet,
+			wire.MaxTxInSequenceNum,
+		)
+	case 2:
+		utils.ReverseSlice(multiSigWallets)
+		//只保留足够门限数量的钱包
+		for i := threshold; i < len(multiSigWallets); i++ {
+			uselessWallet, err := utils.NewWallet(&regtest_params)
+			if err != nil {
+				log.Fatal(err)
+			}
+			multiSigWallets[i] = uselessWallet
+		}
+		tx2, txid2, err = ts.CreateRawTxP2TRMutiSig(
+			// previous output
+			prevHash, 0, int64(amountToSend),
+			// current output
+			sender_p2tr_addr_str, gasfee,
+			// unlock
+			redeem_script_index,
+			[][]byte{},
+			multiSigWallets,
+			threshold,
+		)
+	case 3:
+		for i := 0; i < int(locktime); i++ {
+			err = rpc.GenerateBlock(senderWallet)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("Block generated.")
+		}
+
+		tx2, txid2, err = ts.CreateRawTxP2TR(
+			// previous output
+			prevHash, 0, int64(amountToSend),
+			// current output
+			sender_p2tr_addr_str, gasfee,
+			// unlock
+			redeem_script_index,
+			[][]byte{},
+			multiSigWallets[0],
+			uint32(locktime),
 		)
 	}
 
@@ -256,8 +319,10 @@ func main() {
 		"pass",            //password
 		"123456",          //walletPassphrase
 	)
-	// start_p2pkh()
-	// start_p2tr_keypath()
-	start_p2tr_scriptpath(0) //用Taproot tree中索引为0的脚本解锁utxo
-	// start_p2tr_scriptpath(1) //用Taproot tree中索引为1的脚本解锁utxo
+	// start_p2pkh() //pay to publick hash
+	// start_p2tr_keypath() // keypath redeem script
+	// start_p2tr_scriptpath(0) //hashlock redeem script
+	// start_p2tr_scriptpath(1) //Signature redeem script
+	// start_p2tr_scriptpath(2) //Threshold Signature redeem script
+	// start_p2tr_scriptpath(3) //timelock redeem script
 }

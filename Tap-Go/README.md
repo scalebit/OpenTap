@@ -8,6 +8,16 @@ Tap-Go is a Golang-based repository that facilitates the construction and sendin
 - **P2TR Support:** Construct and send transactions to Taproot addresses.
 - **Script Path Support:** Unlock UTXO using redeem scripts based on script paths in Taproot.
 
+#### Support Redeem Scripts
+
+- **Hashlock Redeem Script:** Allows locking UTXO with a hash, requiring knowledge of the preimage to unlock.
+  - ScriptPath: `start_p2tr_scriptpath(0)`
+- **Signature Redeem Script:** Allows unlocking UTXO with a single signature.
+  - ScriptPath: `start_p2tr_scriptpath(1)`
+- **Threshold Signature Redeem Script:** Enables unlocking UTXO using a threshold number of signatures from a set of keys.
+  - ScriptPath: `start_p2tr_scriptpath(2)`
+- **Timelock Redeem Script:** Allows setting a time lock, requiring a specified amount of time to elapse before the UTXO can be unlocked.
+  - ScriptPath: `start_p2tr_scriptpath(3)`
 
 ### Usage
 
