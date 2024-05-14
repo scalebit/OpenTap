@@ -19,6 +19,20 @@ var rpcConfig = &rpcclient.ConnConfig{
 	DisableTLS:   true,
 }
 
+var walletPassphrase = "123456"
+
+var Regtest_params chaincfg.Params = chaincfg.RegressionNetParams
+
+func InitRPCConfig(host, user, pass, walletpass string) {
+	rpcConfig.Host = host
+	rpcConfig.User = user
+	rpcConfig.Pass = pass
+	walletPassphrase = walletpass
+
+	Regtest_params = chaincfg.RegressionNetParams
+	Regtest_params.DefaultPort = "18443"
+}
+
 func GetUTXOFromTx(txid *chainhash.Hash, address string) (*chainhash.Hash, int64, []byte, int, error) {
 	client, err := rpcclient.New(rpcConfig, nil)
 	if err != nil {
@@ -31,12 +45,10 @@ func GetUTXOFromTx(txid *chainhash.Hash, address string) (*chainhash.Hash, int64
 		return nil, 0, nil, 0, err
 	}
 
-	regtest_params := chaincfg.RegressionNetParams
-	regtest_params.DefaultPort = "18443"
 	for i := 0; i < len(tx_res.MsgTx().TxOut); i++ {
 		balance := tx_res.MsgTx().TxOut[i].Value
 		pubKeyScript := tx_res.MsgTx().TxOut[i].PkScript
-		scriptClass, addrs, flag, err := txscript.ExtractPkScriptAddrs(pubKeyScript, &regtest_params)
+		scriptClass, addrs, flag, err := txscript.ExtractPkScriptAddrs(pubKeyScript, &Regtest_params)
 		if err != nil {
 			return nil, 0, nil, 0, err
 		}
@@ -103,7 +115,7 @@ func GenerateBlock(wallet *Wallet) error {
 	defer client.Shutdown()
 
 	// 解锁钱包
-	if err := client.WalletPassphrase("123456", 60); err != nil {
+	if err := client.WalletPassphrase(walletPassphrase, 60); err != nil {
 		return err
 	}
 
@@ -112,7 +124,7 @@ func GenerateBlock(wallet *Wallet) error {
 	// 	return err
 	// }
 
-	var maxTries int64 = 5
+	var maxTries int64 = 10
 	var blockhash []*chainhash.Hash
 	if blockhash, err = client.GenerateToAddress(1, wallet.Address, &maxTries); err != nil {
 		return err
@@ -121,7 +133,7 @@ func GenerateBlock(wallet *Wallet) error {
 	return nil
 }
 
-func Faccut(address btcutil.Address, amount btcutil.Amount) (*chainhash.Hash, error) {
+func Faucet(address btcutil.Address, amount btcutil.Amount) (*chainhash.Hash, error) {
 	// 连接到 btcd RPC 服务器
 	client, err := rpcclient.New(rpcConfig, nil)
 	if err != nil {
@@ -130,7 +142,7 @@ func Faccut(address btcutil.Address, amount btcutil.Amount) (*chainhash.Hash, er
 	defer client.Shutdown()
 
 	// 解锁钱包
-	if err := client.WalletPassphrase("123456", 60); err != nil {
+	if err := client.WalletPassphrase(walletPassphrase, 60); err != nil {
 		return nil, err
 	}
 
@@ -139,7 +151,7 @@ func Faccut(address btcutil.Address, amount btcutil.Amount) (*chainhash.Hash, er
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("address:", address)
+	// fmt.Println("address:", address)
 	return txhash, err
 }
 
