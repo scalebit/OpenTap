@@ -30,9 +30,6 @@ export function tweakSigner(signer: Signer, opts: any = {}): Signer {
         throw new Error('Invalid tweaked private key!');
     }
 
-    // To import private key
-    // console.log()
-
     return ECPair.fromPrivateKey(Buffer.from(tweakedPrivateKey), {
         network: opts.network,
     })

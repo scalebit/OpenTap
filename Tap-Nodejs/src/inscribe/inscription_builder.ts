@@ -1,5 +1,5 @@
 import axios from "axios";
-import { taproot_address_from_asm } from "../taproot/taproot_builder.js";
+import { taproot_address_from_asm } from "../taproot/taproot_script_builder.js";
 import { getUTXOfromTx, txBroadcastVeify } from "../taproot/bitcoin_rpc.js";
 import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { opcodes, Signer, script } from "bitcoinjs-lib";
@@ -9,7 +9,7 @@ import { toXOnly } from "../taproot/utils.js";
 const URL = `https://turbo.ordinalswallet.com`
 const network = { network: regtest };
 
-export async function ins_create(keypair: Signer, p: string, data: string, txid: string) {
+export async function ins_insribe(keypair: Signer, p: string, data: string, txid: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
         opcodes.OP_CHECKSIG,
@@ -53,7 +53,7 @@ export async function ins_create(keypair: Signer, p: string, data: string, txid:
     txBroadcastVeify(psbt, addr)
 }
 
-export async function fetch_inscriptions(id: string) {
+export async function fetch_inscriptions_rpc(id: string) {
     return new Promise<string>((resolve, reject) => {
         let _URL = URL + "/inscription/" + id
         try {
@@ -68,7 +68,7 @@ export async function fetch_inscriptions(id: string) {
     })
 }
 
-export async function fetch_collection(id: string) {
+export async function fetch_collection_rpc(id: string) {
     return new Promise<string>((resolve, reject) => {
         let _URL = URL + "/collection/" + id
         try {
@@ -84,7 +84,7 @@ export async function fetch_collection(id: string) {
     })
 }
 
-export async function fetch_wallet(address: string) {
+export async function fetch_wallet_rpc(address: string) {
     return new Promise<string>((resolve, reject) => {
         let _URL = URL + "/wallet/" + address
         try {

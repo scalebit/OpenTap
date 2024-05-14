@@ -31,7 +31,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "yarn build && node dist/index.js",
+    "wallet": "yarn build && node dist/template/wallet.js",
+    "staking": "yarn build && node dist/template/staking.js",
     "test": "mocha 'test/*.test.ts'"
   }
 }

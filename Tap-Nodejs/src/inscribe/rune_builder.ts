@@ -14,7 +14,7 @@ import {
 } from "bitcoinjs-lib";
 import * as ecc from "tiny-secp256k1";
 import ECPairFactory, { ECPairAPI, Signer } from "ecpair";
-import { taproot_address_from_asm } from "../taproot/taproot_builder";
+import { taproot_address_from_asm } from "../taproot/taproot_script_builder";
 import { pushTrans, txBroadcastVeify } from "../taproot/bitcoin_rpc";
 
 
@@ -27,7 +27,7 @@ const network = networks.regtest;
 const RUNE_RECEIVE_VALUE = 600;
 
 function createRune() {
-    const spacedRune = SpacedRune.fromString("WET.GEDANG.ENAKKK");
+    const spacedRune = SpacedRune.fromString("Open-Rune");
     const runestone = new Runestone({
         edicts: [],
         pointer: new U32(0n),
