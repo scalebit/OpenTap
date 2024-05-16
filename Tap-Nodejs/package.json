@@ -1,9 +1,9 @@
 {
-  "name": "taproot-with-bitcoinjs",
+  "name": "open-tap-nodejs",
   "version": "1.0.0",
   "main": "dist/index.js",
   "type": "module",
-  "repository": "git@github.com:Eunovo/taproot-with-bitcoinjs.git",
+  "repository": "git@github.com:Eunovo/open-tap-nodejs.git",
   "license": "MIT",
   "devDependencies": {
     "@babel/helper-compilation-targets": "^7.23.6",
