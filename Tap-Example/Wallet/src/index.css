@@ -1,15 +1,10 @@
-.item {
-  border: 1px solid #000000;
-  padding: 20px;
-  border-radius: 4px;
-  margin-bottom: 20px;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
 }
 
-.box {
-  flex-grow: 1;
-  max-width: 1920px;
-  margin: auto;
-  padding: 15px;
-  font-family: sans-serif;
-  line-height: 1.5;
-}
