@@ -33,6 +33,7 @@
     "build": "tsc",
     "wallet": "yarn build && node dist/template/wallet.js",
     "staking": "yarn build && node dist/template/staking.js",
+    "indexer": "yarn build && node dist/template/indexer.js",
     "test": "mocha 'test/*.test.ts'"
   }
 }
