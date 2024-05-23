@@ -25,9 +25,11 @@ export async function get_taproot_bridge(keypair: Signer, keys: any[], keynum: n
     // So generated some random private key to sign
     const leafKeys = [];
     const leafPubkeys = [];
+    const pubkeys = [];
     for (let i = 0; i < KeyNum; i++) {
         const leafKey: Signer = keys[i];
         leafKeys.push(leafKey);
+        pubkeys.push(toXOnly(leafKey.publicKey))
         leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
     }
 
@@ -64,6 +66,9 @@ export async function get_taproot_bridge(keypair: Signer, keys: any[], keynum: n
         scriptTree,
         redeem,
         network,
+        pubkeys,
+        m: KeyNum,
+        n: Threshold
     });
 
     const p2csvtr = bitcoin.payments.p2tr({

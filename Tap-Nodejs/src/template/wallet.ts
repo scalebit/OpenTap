@@ -17,10 +17,10 @@ import * as tinysecp from 'tiny-secp256k1'
 import { Buff } from '@cmdcode/buff'
 import { schnorr } from '@noble/curves/secp256k1'
 import { regtest } from "bitcoinjs-lib/src/networks.js";
-import { toXOnly, tweakSigner, IUTXO, Config } from "../taproot/utils.js"
 import { asm_builder, asm_csv, } from "../taproot/taproot_script_builder.js"
 import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "../bridge/multisig_builder.js"
 import * as fs from 'fs';
+import { toXOnly, tweakSigner, IUTXO, Config } from "../taproot/utils.js"
 
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
@@ -31,6 +31,9 @@ const LEAF_VERSION_TAPSCRIPT = 192;
 async function start() {
     // Stable Pair
     const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
+
+    //Basic Test
+    // start_p2pktr_pubkeys()
 
     // Classic Multisig
     // await bridge_unit(keypair)
@@ -93,6 +96,62 @@ async function start_p2pktr(keypair: Signer) {
     // Auto-Sign
     psbt.signInput(0, tweakedSigner);
 
+    psbt.finalizeAllInputs();
+
+    const tx = psbt.extractTransaction();
+    console.log(tx)
+
+    console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
+    console.log("Txid is:", tx.getId());
+
+    const txHex = await broadcast(tx.toHex());
+    console.log(`Success! TxHex is ${txHex}`);
+
+    // generate new block to lookup
+    await pushBlock(p2pktr_addr)
+}
+
+// Basic test pubkeys
+async function start_p2pktr_pubkeys() {
+    console.log(`Running "Pay to Pubkey with taproot example"`);
+
+    const Key1 = ECPair.makeRandom({ network });
+    const Key2 = ECPair.makeRandom({ network });
+
+    // Tweak the original keypair
+    // const tweakedSigner = tweakSigner(keypair, { network });
+    // Generate an address from the tweaked public key
+    const p2pktr = payments.p2tr({
+        pubkeys: [toXOnly(Key1.publicKey), toXOnly(Key2.publicKey)],
+        network
+    });
+    const p2pktr_addr = p2pktr.address!;
+
+    console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`)
+
+    let temp_trans = await pushTrans(p2pktr_addr)
+    console.log("the new txid is:", temp_trans)
+
+    await pushBlock(p2pktr_addr)
+
+    const utxos = await getUTXOfromTx(temp_trans, p2pktr_addr)
+    console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
+
+    const psbt = new Psbt({ network });
+    psbt.addInput({
+        hash: utxos.txid,
+        index: utxos.vout,
+        witnessUtxo: { value: utxos.value, script: p2pktr.output! }
+    });
+
+    psbt.addOutput({
+        address: "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", // main wallet address 
+        value: utxos.value - 150
+    });
+
+    // Auto-Sign
+    psbt.signInput(0, Key1);
+    psbt.signInput(0, Key2);
     psbt.finalizeAllInputs();
 
     const tx = psbt.extractTransaction();

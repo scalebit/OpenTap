@@ -76,8 +76,6 @@ export async function waitUntilUTXO(address: string) {
                     method: 'listunspent'
                 }
                 const response: AxiosResponse<string> = await axios.post(URL, data);
-                // console.log(response.data);
-                // console.log(JSON.parse(JSON.stringify(response.data)));
                 const utxodata: IUTXO[] = response.data ? JSON.parse(JSON.stringify(response.data)) : undefined;
                 console.log(utxodata);
                 if (utxodata.length > 0) {
