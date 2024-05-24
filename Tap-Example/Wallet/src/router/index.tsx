@@ -1,7 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import Layout from '../Layout'
 import CreateWallet from '../pages/CreateWallet'
-import OpenExsitingWallet from '../pages/OpenExsitingWallet'
+import NoWallet from '../pages/NoWallet'
 
 export const router = createBrowserRouter([
   {
@@ -10,11 +10,11 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <CreateWallet />
+        element: <NoWallet />
       },
       {
-        path: '/open-exsiting-wallet',
-        element: <OpenExsitingWallet />
+        path: '/create-wallet',
+        element: <CreateWallet />
       },
     ]
   }
