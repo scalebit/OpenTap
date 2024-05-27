@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../store/index'
+import { asm_builder } from 'tap-node'
 
 const CreateWallet = () => {
     const { network, publicKey } = useStore()
@@ -20,6 +21,8 @@ const CreateWallet = () => {
     const [threshold, setThreshold] = useState(1)
 
     const [descriptor, setDescriptor] = useState('vuwuevbbseviubweuirbviuaehriyvbkhebrviyebriyvbiwEBSVIUIAEVUYEGSUKRGVUEYRGF7458GERUGIVYGEAR8OTG4875EG487E5YGH45HG45HG9H94G')
+
+    console.log(setDescriptor)
 
     useEffect(() => {
         if (publicKey) {
@@ -57,8 +60,12 @@ const CreateWallet = () => {
         } else if (step === 3) {
             const flag = publicKeyArr.every(item => item.tag && item.publicKey)
             if (!flag || threshold < 1 || threshold > publicKeyArr.length) {
-               return
+                return
             }
+            //TODO:检查所有的publickey是否为32位，如果不是则return
+
+            //生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）
+            asm_builder
         }
 
         setStep(step + 1)
@@ -114,13 +121,14 @@ const CreateWallet = () => {
 
                     <div className='my-5 w-[600px]'>
                         {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             publicKeyArr.map((item: any, index: number) => <div key={index} className='flex mb-3'>
                                 <input type="text" placeholder="Tag" value={item.tag} onChange={(e) => changePK('tag', e.target.value, index)} className="input input-bordered w-[100px] mr-2" />
                                 <input type="text" placeholder="Publick Key" disabled={index === 0} value={item.publicKey} onChange={(e) => changePK('publicKey', e.target.value, index)} className="input input-bordered flex-1" />
                                 {
                                     index > 0 ? <button className="btn btn-circle ml-2" onClick={() => delPublicKey(index)}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button> : <div className='w-[48px] h-[48px] ml-2'></div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button> : <div className='w-[48px] h-[48px] ml-2'></div>
                                 }
                             </div>)
                         }
