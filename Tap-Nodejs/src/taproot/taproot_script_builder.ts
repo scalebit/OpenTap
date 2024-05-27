@@ -12,6 +12,7 @@ import { regtest } from "bitcoinjs-lib/src/networks.js";
 initEccLib(tinysecp as any);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 const network = networks.regtest;
+const network_array = [networks.bitcoin, networks.testnet, networks.regtest];
 const LEAF_VERSION_TAPSCRIPT = 192;
 
 export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): { p2tr: bitcoin.payments.Payment, redeem: any } {
@@ -34,6 +35,32 @@ export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): 
         scriptTree,
         redeem,
         network,
+    });
+
+    return {
+        p2tr,
+        redeem
+    };
+}
+
+export function p2tr_wallet(asm: Buffer, pk: string[]): { p2tr: bitcoin.payments.Payment, redeem: any } {
+    const scriptTree: Taptree =
+    {
+        output: asm
+    };
+
+    const redeem = {
+        output: asm,
+        redeemVersion: LEAF_VERSION_TAPSCRIPT,
+    };
+
+    const pubkeys: Buffer[] = pk.map(str => Buffer.from(str));
+
+    const p2tr = bitcoin.payments.p2tr({
+        scriptTree,
+        redeem,
+        network,
+        pubkeys
     });
 
     return {
