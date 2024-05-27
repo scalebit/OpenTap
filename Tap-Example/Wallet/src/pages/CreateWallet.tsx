@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../store/index'
-import { asm_builder } from 'tap-node'
+import { asm_builder, p2tr_wallet } from 'open-tap-nodejs/src/taproot/taproot_script_builder'
 
 const CreateWallet = () => {
     const { network, publicKey } = useStore()
@@ -64,8 +64,14 @@ const CreateWallet = () => {
             }
             //TODO:检查所有的publickey是否为32位，如果不是则return
 
-            //生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）
-            asm_builder
+            //创建对应的地址和解锁脚本
+            const pks: string[] = publicKeyArr.map(item => item.publicKey)
+            const script = asm_builder(pks, threshold)
+            const { p2tr, redeem } = p2tr_wallet(script, pks)
+
+            //TODO:生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）
+            localStorage.setItem(walletName + '-address', JSON.stringify(p2tr));
+            localStorage.setItem(walletName + '-reedem', JSON.stringify(redeem));
         }
 
         setStep(step + 1)
