@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { asm_builder, p2tr_wallet } from 'open-tap-nodejs/src/taproot/taproot_script_builder'
+import { asm_builder, taproot_address_wallet } from 'opentap/src/taproot/taproot_script_builder'
 import { useStore } from '../store/index'
 import { PublicKey } from '../config/interface'
 // import { downloadJSON } from '../config/index'
@@ -86,7 +86,7 @@ const CreateWallet = () => {
                 const pks: string[] = publicKeyArr.map(item => item.publicKey)
                 const script = asm_builder(pks, threshold)
 
-                const { p2tr, redeem } = p2tr_wallet(script, pks)
+                const { p2tr, redeem } = taproot_address_wallet(script, pks)
                 console.log(p2tr, redeem)
 
                 // //TODO:生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）

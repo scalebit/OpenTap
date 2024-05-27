@@ -1888,7 +1888,7 @@ once@^1.3.0:
   dependencies:
     wrappy "1"
 
-"open-tap-nodejs@file:../../tap-nodejs":
+"opentap@file:../../tap-nodejs":
   version "1.0.0"
   dependencies:
     "@cmdcode/crypto-tools" "^2.7.6"

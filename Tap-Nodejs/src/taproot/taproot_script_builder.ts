@@ -43,7 +43,7 @@ export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): 
     };
 }
 
-export function p2tr_wallet(asm: Buffer, pk: string[]): { p2tr: bitcoin.payments.Payment, redeem: any } {
+export function taproot_address_wallet(asm: Buffer, pk: string[]): { p2tr: bitcoin.payments.Payment, redeem: any } {
     const scriptTree: Taptree =
     {
         output: asm
@@ -55,7 +55,7 @@ export function p2tr_wallet(asm: Buffer, pk: string[]): { p2tr: bitcoin.payments
     };
 
     const pubkeys: Buffer[] = pk.map(str => Buffer.from(str));
-    const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
+    const keypair = ECPair.makeRandom({ network })
 
     const p2tr = bitcoin.payments.p2tr({
         pubkey: toXOnly(keypair.publicKey),

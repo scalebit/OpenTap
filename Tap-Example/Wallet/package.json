@@ -12,12 +12,12 @@
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "buffer": "^6.0.3",
-    "open-tap-nodejs": "file:../../tap-nodejs",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.23.1",
     "vite-plugin-wasm": "^3.3.0",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "opentap": "file:../../tap-nodejs"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

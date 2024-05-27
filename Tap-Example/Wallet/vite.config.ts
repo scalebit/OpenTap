@@ -6,6 +6,9 @@ import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfil
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), wasm()],
+  build: {
+    target: 'esnext' //browsers can handle the latest ES features
+  },
   optimizeDeps: {
     esbuildOptions: {
       // Node.js global to browser globalThis
