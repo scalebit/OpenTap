@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "type": "module",
-  "repository": "git@github.com:Eunovo/open-tap-nodejs.git",
   "license": "MIT",
   "devDependencies": {
     "@babel/helper-compilation-targets": "^7.23.6",
@@ -33,6 +32,7 @@
     "build": "tsc",
     "wallet": "yarn build && node dist/template/wallet.js",
     "staking": "yarn build && node dist/template/staking.js",
+    "indexer": "yarn build && node dist/template/indexer.js",
     "test": "mocha 'test/*.test.ts'"
   }
 }

@@ -6,10 +6,9 @@ import * as bitcoin from 'bitcoinjs-lib';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
 import * as tinysecp from 'tiny-secp256k1'
-import { toXOnly, tweakSigner } from "./utils";
-import { regtest } from "bitcoinjs-lib/src/networks";
+import { toXOnly } from "./utils.js";
+import { regtest } from "bitcoinjs-lib/src/networks.js";
 
-// const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 const network = networks.regtest;
@@ -34,7 +33,7 @@ export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): 
         internalPubkey: toXOnly(keypair.publicKey),
         scriptTree,
         redeem,
-        network: regtest,
+        network,
     });
 
     return {
