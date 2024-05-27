@@ -63,7 +63,7 @@ const CreateWallet = () => {
                 return
             }
             //TODO:检查所有的publickey是否为32位，如果不是则return
-
+            console.log("step3")
             //创建对应的地址和解锁脚本
             const pks: string[] = publicKeyArr.map(item => item.publicKey)
             const script = asm_builder(pks, threshold)

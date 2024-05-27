@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "buffer": "^6.0.3",
     "open-tap-nodejs": "file:../../tap-nodejs",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
