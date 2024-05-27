@@ -55,8 +55,10 @@ export function p2tr_wallet(asm: Buffer, pk: string[]): { p2tr: bitcoin.payments
     };
 
     const pubkeys: Buffer[] = pk.map(str => Buffer.from(str));
+    const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
 
     const p2tr = bitcoin.payments.p2tr({
+        pubkey: toXOnly(keypair.publicKey),
         scriptTree,
         redeem,
         network,
