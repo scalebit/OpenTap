@@ -1,10 +1,6 @@
 import { create } from 'zustand'
+import { IBalance, IWallet } from '../config/interface'
 
-interface IBalance {
-  confirmed: number,
-  unconfirmed: number
-  total: number
-}
 
 type State = {
   unisatInstalled: boolean
@@ -14,6 +10,8 @@ type State = {
   address: string
   balance: IBalance
   network: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  localWallet: any[]
 }
 
 type Actions = {
@@ -24,8 +22,21 @@ type Actions = {
   setAddress: (payload: string) => void
   setBalance: (payload: IBalance) => void
   setNetwork: (payload: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setLocalWallet: (payload: IWallet[]) => void
 }
 
+const localWallet: IWallet[] = []
+const localWalletStr: string = localStorage.getItem('localWallet') || ''
+if (localWalletStr) {
+  for (const key in JSON.parse(localWalletStr)) {
+    const obj_: any = JSON.parse(localWalletStr)[key]
+    localWallet.push({
+      walletName: key,
+      address: obj_.p2tr.address
+    })
+  }
+}
 export const useStore: any = create<State & Actions>(set => ({
   unisatInstalled: false,
   connected: false,
@@ -38,6 +49,7 @@ export const useStore: any = create<State & Actions>(set => ({
     total: 0,
   },
   network: 'livenet',
+  localWallet,
 
   setUnisatInstalled: async (payload: boolean) => {
     set(() => ({ unisatInstalled: payload }))
@@ -60,4 +72,7 @@ export const useStore: any = create<State & Actions>(set => ({
   setNetwork: async (payload: string) => {
     set(() => ({ network: payload }))
   },
+  setLocalWallet: async (payload: IWallet[]) => {
+    set(() => ({ localWallet: payload }))
+  }
 }))

@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from "react-router-dom"
 import { asm_builder, taproot_address_wallet } from 'opentap-v0.03/src/taproot/taproot_script_builder'
 import { useStore } from '../store/index'
-import { PublicKey } from '../config/interface'
+import { IPublicKey, AnyObject } from '../config/interface'
 import { invert_json_p2tr } from 'opentap-v0.03/src/taproot/utils'
 // import { downloadJSON } from '../config/index'
 
 const CreateWallet = () => {
     const navigate = useNavigate()
 
-    const { network, publicKey } = useStore()
+    const { network, publicKey, localWallet, setLocalWallet } = useStore()
 
     const [isImport, setIsImport] = useState(false)
 
@@ -17,7 +17,7 @@ const CreateWallet = () => {
 
     const [walletName, setWalletName] = useState('')
 
-    const [publicKeyArr, setPublicKeyArr] = useState<PublicKey[]>([{
+    const [publicKeyArr, setPublicKeyArr] = useState<IPublicKey[]>([{
         tag: '',
         publicKey: ''
     },
@@ -29,6 +29,9 @@ const CreateWallet = () => {
     const [threshold, setThreshold] = useState(1)
 
     const [descriptor, setDescriptor] = useState('')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [tempP2pktr, setTempP2pktr] = useState<any>()
 
     useEffect(() => {
         if (publicKey) {
@@ -75,6 +78,13 @@ const CreateWallet = () => {
                     alert('Please enter wallet name!')
                     return
                 }
+            } else if (step === 4) {
+                const flag = publicKeyArr.every(item => item.tag)
+                if (!flag) {
+                    alert('Please enter the correct format of Tag!')
+                    return
+                }
+                handleCreate()
             }
         } else {
             if (step === 2) {
@@ -97,32 +107,29 @@ const CreateWallet = () => {
     }
 
     const handleCreate = () => {
+        let p2tr_: AnyObject = {}
         if (isImport) {
-            if (step === 4) {
-                const flag = publicKeyArr.every(item => item.tag)
-                if (!flag) {
-                    return
-                }
-            }
+            p2tr_ = tempP2pktr
+            p2tr_.name = walletName
+        } else {
+            //创建对应的地址和解锁脚本
+            const pks: string[] = publicKeyArr.map(item => item.publicKey)
+            const script = asm_builder(pks, threshold)
+
+            const { p2tr } = taproot_address_wallet(script, pks, walletName, threshold)
+            setDescriptor(JSON.stringify(p2tr))
+            p2tr_ = p2tr
         }
-        //创建对应的地址和解锁脚本
-        const pks: string[] = publicKeyArr.map(item => item.publicKey)
-        const script = asm_builder(pks, threshold)
-
-        const { p2tr, redeem } = taproot_address_wallet(script, pks, walletName, threshold)
-
-        setDescriptor(p2tr.address || '')
 
         // 生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let localWallet: any = localStorage.getItem('localWallet')
-        if (localWallet) {
-            localWallet = JSON.parse(localWallet)
+        let localWallet_: any = localStorage.getItem('localWallet')
+        if (localWallet_) {
+            localWallet_ = JSON.parse(localWallet_)
             localStorage.setItem(`localWallet`, JSON.stringify({
-                ...localWallet,
+                ...localWallet_,
                 [walletName]: {
-                    p2tr,
-                    redeem,
+                    p2tr: p2tr_,
                     publicKeyArr,
                     threshold
                 }
@@ -130,22 +137,30 @@ const CreateWallet = () => {
         } else {
             localStorage.setItem(`localWallet`, JSON.stringify({
                 [walletName]: {
-                    p2tr,
-                    redeem,
+                    p2tr: p2tr_,
                     publicKeyArr,
                     threshold
                 }
             }))
         }
+
+        setLocalWallet([...localWallet, { walletName, address: p2tr_.address }])
     }
 
     // 通过descriptor导入
     const handleImport = () => {
         const { p2pktr, stringArray } = invert_json_p2tr(descriptor)
         const import_threshold = p2pktr.m!
-        console.log(p2pktr)
-        console.log(stringArray)
-        console.log(import_threshold)
+        setTempP2pktr(p2pktr)
+        const arr_ = stringArray.map((item: string) => {
+            return {
+                tag: '',
+                publicKey: item
+            }
+        })
+
+        setPublicKeyArr(arr_)
+        setThreshold(import_threshold)
     }
 
     const copyToClipboard = () => {
@@ -198,7 +213,7 @@ const CreateWallet = () => {
 
         <div className='my-5 w-[600px]'>
             {
-                publicKeyArr.map((item: PublicKey, index: number) => <div key={index} className='flex mb-3'>
+                publicKeyArr.map((item: IPublicKey, index: number) => <div key={index} className='flex mb-3'>
                     <input type="text" placeholder="Tag" value={item.tag} onChange={(e) => changePK('tag', e.target.value, index)} className="input input-bordered w-[100px] mr-2" />
                     <input type="text" placeholder="Publick Key" disabled={index === 0} value={item.publicKey} onChange={(e) => changePK('publicKey', e.target.value, index)} className="input input-bordered flex-1" />
                     {
@@ -226,11 +241,14 @@ const CreateWallet = () => {
 
     const Step4DOM = isImport ? <div>
         <p className='font-bold mb-5'>Step 4: Tag</p>
+        <p className='font-bold mb-5'>descriptor</p>
+        <textarea className="textarea mb-5 w-[600px] h-[150px] mb-5" value={descriptor} disabled></textarea>
+
         <p>Create Threshold Multi-Sig Wallet or Normal Wallet.</p>
 
         <div className='my-5 w-[600px]'>
             {
-                publicKeyArr.map((item: PublicKey, index: number) => <div key={index} className='flex mb-3'>
+                publicKeyArr.map((item: IPublicKey, index: number) => <div key={index} className='flex mb-3'>
                     <input type="text" placeholder="Tag" value={item.tag} onChange={(e) => changePK('tag', e.target.value, index)} className="input input-bordered w-[100px] mr-2" />
                     <input type="text" placeholder="Publick Key" disabled value={item.publicKey} onChange={(e) => changePK('publicKey', e.target.value, index)} className="input input-bordered flex-1" />
                 </div>)

@@ -1,16 +1,16 @@
 import { useEffect } from "react"
 import { Outlet, NavLink } from "react-router-dom"
 import { useStore } from "./store"
-import NoWallet from "./components/NoWallet"
 import './layout.scss'
+import { IWallet } from "./config/interface"
 
 function Layout() {
 
   const {
     connected,
     address,
-    balance,
     network,
+    localWallet,
     setUnisatInstalled,
     setConnected,
     setAccounts,
@@ -110,11 +110,14 @@ function Layout() {
       </header>
       <div className="flex content">
         <nav className="menu bg-base-200 w-56 py-5">
-          <li>
-            <a className="text-center block">
-              Wallet 1
-            </a>
-          </li>
+          {
+            localWallet.map((item: IWallet) => <li key={item.address}>
+              <NavLink to={`/wallet/${item.address}`} className="text-center block">
+                {item.walletName}
+              </NavLink>
+            </li>)
+          }
+
           <li>
             <NavLink to="/create-wallet" className="add-wallet-btn text-center block">
               +
