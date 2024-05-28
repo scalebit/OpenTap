@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from "react-router-dom"
-import { asm_builder, taproot_address_wallet } from 'opentap/src/taproot/taproot_script_builder'
+import { asm_builder, taproot_address_wallet } from 'opentap-v0.03/src/taproot/taproot_script_builder'
 import { useStore } from '../store/index'
 import { PublicKey } from '../config/interface'
+import { invert_json_p2tr } from 'opentap-v0.03/src/taproot/utils'
 // import { downloadJSON } from '../config/index'
 
 const CreateWallet = () => {
@@ -108,11 +109,11 @@ const CreateWallet = () => {
         const pks: string[] = publicKeyArr.map(item => item.publicKey)
         const script = asm_builder(pks, threshold)
 
-        const { p2tr, redeem } = taproot_address_wallet(script, pks)
+        const { p2tr, redeem } = taproot_address_wallet(script, pks, walletName, threshold)
 
         setDescriptor(p2tr.address || '')
 
-        // //TODO:生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）
+        // 生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let localWallet: any = localStorage.getItem('localWallet')
         if (localWallet) {
@@ -140,7 +141,11 @@ const CreateWallet = () => {
 
     // 通过descriptor导入
     const handleImport = () => {
-
+        const { p2pktr, stringArray } = invert_json_p2tr(descriptor)
+        const import_threshold = p2pktr.m!
+        console.log(p2pktr)
+        console.log(stringArray)
+        console.log(import_threshold)
     }
 
     const copyToClipboard = () => {

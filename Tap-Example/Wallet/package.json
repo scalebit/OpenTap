@@ -17,7 +17,7 @@
     "react-router-dom": "^6.23.1",
     "vite-plugin-wasm": "^3.3.0",
     "zustand": "^4.5.2",
-    "opentap": "file:../../tap-nodejs"
+    "opentap-v0.03": "file:../../tap-nodejs"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

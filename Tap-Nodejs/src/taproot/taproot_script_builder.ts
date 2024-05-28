@@ -43,7 +43,7 @@ export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): 
     };
 }
 
-export function taproot_address_wallet(asm: Buffer, pk: string[]): { p2tr: bitcoin.payments.Payment, redeem: any } {
+export function taproot_address_wallet(asm: Buffer, pk: string[], name: string, threshold: number): { p2tr: bitcoin.payments.Payment, redeem: any } {
     const scriptTree: Taptree =
     {
         output: asm
@@ -54,15 +54,17 @@ export function taproot_address_wallet(asm: Buffer, pk: string[]): { p2tr: bitco
         redeemVersion: LEAF_VERSION_TAPSCRIPT,
     };
 
-    const pubkeys: Buffer[] = pk.map(str => Buffer.from(str));
+    const pubkeys: Buffer[] = pk.map(str => Buffer.from(str, 'hex'));
     const keypair = ECPair.makeRandom({ network })
 
     const p2tr = bitcoin.payments.p2tr({
+        name,
         pubkey: toXOnly(keypair.publicKey),
         scriptTree,
         redeem,
         network,
-        pubkeys
+        pubkeys,
+        m: threshold
     });
 
     return {

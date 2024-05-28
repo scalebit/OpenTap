@@ -2,6 +2,7 @@ import {
     initEccLib,
     Signer,
     crypto,
+    payments,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
 import { ECPairFactory, ECPairAPI } from 'ecpair';
@@ -91,6 +92,18 @@ export function createKeySpendOutput(publicKey: any) {
         // x-only tweaked pubkey
         tweaked,
     ]);
+}
+
+export function invert_json_p2tr(p2tr: string) {
+    const p2pktr: payments.Payment = JSON.parse(p2tr, (k, v) => {
+        if (
+            v !== null && typeof v === 'object' && 'type' in v && v.type === 'Buffer' && 'data' in v && Array.isArray(v.data)) {
+            return Buffer.from(v.data);
+        }
+        return v;
+    });
+    const stringArray = p2pktr.pubkeys!.map(buffer => buffer.toString('hex'));
+    return { p2pktr, stringArray };
 }
 
 export interface IUTXO {
