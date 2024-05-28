@@ -14,9 +14,9 @@ importers:
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
-      open-tap-nodejs:
+      opentap:
         specifier: file:../../tap-nodejs
-        version: file:../../tap-nodejs(typescript@5.4.5)
+        version: open-tap-nodejs@file:../../tap-nodejs(typescript@5.4.5)
       react:
         specifier: ^18.2.0
         version: 18.3.1

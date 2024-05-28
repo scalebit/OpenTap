@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from "react-router-dom"
 import { asm_builder, taproot_address_wallet } from 'opentap/src/taproot/taproot_script_builder'
 import { useStore } from '../store/index'
 import { PublicKey } from '../config/interface'
 // import { downloadJSON } from '../config/index'
 
 const CreateWallet = () => {
+    const navigate = useNavigate()
+
     const { network, publicKey } = useStore()
 
     const [isImport, setIsImport] = useState(false)
@@ -24,7 +27,7 @@ const CreateWallet = () => {
 
     const [threshold, setThreshold] = useState(1)
 
-    const [descriptor, setDescriptor] = useState('vuwuevbbseviubweuirbviuaehriyvbkhebrviyebriyvbiwEBSVIUIAEVUYEGSUKRGVUEYRGF7458GERUGIVYGEAR8OTG4875EG487E5YGH45HG45HG9H94G')
+    const [descriptor, setDescriptor] = useState('')
 
     useEffect(() => {
         if (publicKey) {
@@ -62,36 +65,29 @@ const CreateWallet = () => {
         if (isImport) {
             if (step === 2) {
                 if (!descriptor) {
+                    alert('Please enter descriptor!')
                     return
                 }
+                handleImport()
             } else if (step === 3) {
                 if (!walletName) {
+                    alert('Please enter wallet name!')
                     return
                 }
             }
         } else {
             if (step === 2) {
                 if (!walletName) {
+                    alert('Please enter wallet name!')
                     return
                 }
             } else if (step === 3) {
-                const flag = publicKeyArr.every(item => item.tag && item.publicKey)
+                const flag = publicKeyArr.every(item => item.tag && item.publicKey && item.publicKey.length === 66)
                 if (!flag || threshold < 1 || threshold > publicKeyArr.length) {
+                    alert('Data format error!')
                     return
                 }
-
-                //TODO:检查所有的publickey是否为32位，如果不是则return
-                console.log("step3")
-                //创建对应的地址和解锁脚本
-                const pks: string[] = publicKeyArr.map(item => item.publicKey)
-                const script = asm_builder(pks, threshold)
-
-                const { p2tr, redeem } = taproot_address_wallet(script, pks)
-                console.log(p2tr, redeem)
-
-                // //TODO:生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）
-                localStorage.setItem(walletName + '-address', JSON.stringify(p2tr));
-                localStorage.setItem(walletName + '-reedem', JSON.stringify(redeem));
+                handleCreate()
             }
         }
         if (step <= 3) {
@@ -108,13 +104,51 @@ const CreateWallet = () => {
                 }
             }
         }
+        //创建对应的地址和解锁脚本
+        const pks: string[] = publicKeyArr.map(item => item.publicKey)
+        const script = asm_builder(pks, threshold)
+
+        const { p2tr, redeem } = taproot_address_wallet(script, pks)
+
+        setDescriptor(p2tr.address || '')
+
+        // //TODO:生成JSON并保存在LocalStroge中，并标记为（wallet + 编号 + 之前命名的名称）
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let localWallet: any = localStorage.getItem('localWallet')
+        if (localWallet) {
+            localWallet = JSON.parse(localWallet)
+            localStorage.setItem(`localWallet`, JSON.stringify({
+                ...localWallet,
+                [walletName]: {
+                    p2tr,
+                    redeem,
+                    publicKeyArr,
+                    threshold
+                }
+            }))
+        } else {
+            localStorage.setItem(`localWallet`, JSON.stringify({
+                [walletName]: {
+                    p2tr,
+                    redeem,
+                    publicKeyArr,
+                    threshold
+                }
+            }))
+        }
+    }
+
+    // 通过descriptor导入
+    const handleImport = () => {
+
     }
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(descriptor).then(() => {
-            console.log('copy success')
+            alert('Successfully copied to clipboard!')
         }).catch((err) => {
-            console.error("copy error: ", err);
+            alert('Copy error!')
+            console.error("Copy error: ", err);
         });
     }
 
@@ -181,7 +215,7 @@ const CreateWallet = () => {
 
         <div className='flex mt-10'>
             <button className='btn w-[150px] mr-5' onClick={() => setStep(step - 1)}>Back</button>
-            <button className='btn w-[150px] btn-primary' onClick={() => nextStep()}>Confirm</button>
+            <button className='btn w-[150px] btn-primary' onClick={() => nextStep()}>Create</button>
         </div>
     </div>
 
@@ -215,7 +249,7 @@ const CreateWallet = () => {
         <textarea className="textarea my-5 w-[600px] h-[150px]" value={descriptor} disabled></textarea>
         <p>Copy and save the descriptor, then finish the creation.</p>
         <div className='flex mt-10'>
-            <button className='btn w-[150px] mr-5' onClick={handleCreate}>Create</button>
+            <button className='btn w-[150px] mr-5' onClick={() => navigate('/')}>Go Home</button>
             <button className='btn w-[150px] btn-primary' onClick={copyToClipboard}>Copy</button>
         </div>
     </div>
