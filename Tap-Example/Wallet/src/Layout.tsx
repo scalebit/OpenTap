@@ -98,9 +98,9 @@ function Layout() {
             <p className="mr-5">{network}</p>
             <div className="dropdown dropdown-bottom dropdown-end">
               <div tabIndex={0} role="button" className="btn m-1">{address.slice(0, 5)}...{address.slice(-5)}</div>
-              <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+              {/* <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
                 <li><a>Disconnect</a></li>
-              </ul>
+              </ul> */}
             </div>
           </div> : <button className="btn btn-primary" onClick={async () => {
             const result = await unisat.requestAccounts();

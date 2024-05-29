@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from "react-router-dom"
 import { asm_builder, taproot_address_wallet } from 'opentap-v0.03/src/taproot/taproot_script_builder'
 import { useStore } from '../store/index'
-import { IPublicKey, AnyObject } from '../config/interface'
+import { IPublicKey, AnyObject, IWallet } from '../config/interface'
 import { invert_json_p2tr } from 'opentap-v0.03/src/taproot/utils'
 // import { downloadJSON } from '../config/index'
 
@@ -72,12 +72,27 @@ const CreateWallet = () => {
                     alert('Please enter descriptor!')
                     return
                 }
+
+                const obj_ = JSON.parse(descriptor)
+                const isExisted = localWallet.some((item: IWallet) => item.address === obj_.address)
+                if (isExisted) {
+                    alert('Wallet already exists!')
+                    return
+                }
+
                 handleImport()
             } else if (step === 3) {
                 if (!walletName) {
                     alert('Please enter wallet name!')
                     return
                 }
+
+                const isNameExisted = localWallet.some((item: IWallet) => item.walletName === walletName)
+                if (isNameExisted) {
+                    alert('The name is the same as an existing wallet name!')
+                    return
+                }
+
             } else if (step === 4) {
                 const flag = publicKeyArr.every(item => item.tag)
                 if (!flag) {
