@@ -4,9 +4,14 @@ import { asm_builder, taproot_address_wallet } from 'opentap-v0.03/src/taproot/t
 import { useStore } from '../store/index'
 import { IPublicKey, AnyObject, IWallet } from '../config/interface'
 import { invert_json_p2tr } from 'opentap-v0.03/src/taproot/utils'
+import { useToast } from "@/components/ui/use-toast"
+
+
 // import { downloadJSON } from '../config/index'
 
 const CreateWallet = () => {
+    const { toast } = useToast()
+
     const navigate = useNavigate()
 
     const { network, publicKey, localWallet, setLocalWallet } = useStore()
@@ -69,34 +74,54 @@ const CreateWallet = () => {
         if (isImport) {
             if (step === 2) {
                 if (!descriptor) {
-                    alert('Please enter descriptor!')
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "Please enter descriptor",
+                    })
                     return
                 }
 
                 const obj_ = JSON.parse(descriptor)
                 const isExisted = localWallet.some((item: IWallet) => item.address === obj_.address)
                 if (isExisted) {
-                    alert('Wallet already exists!')
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "Wallet already exists",
+                    })
                     return
                 }
 
                 handleImport()
             } else if (step === 3) {
                 if (!walletName) {
-                    alert('Please enter wallet name!')
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "Please enter wallet name",
+                    })
                     return
                 }
 
                 const isNameExisted = localWallet.some((item: IWallet) => item.walletName === walletName)
                 if (isNameExisted) {
-                    alert('The name is the same as an existing wallet name!')
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "The name is the same as an existing wallet name",
+                    })
                     return
                 }
 
             } else if (step === 4) {
                 const flag = publicKeyArr.every(item => item.tag)
                 if (!flag) {
-                    alert('Please enter the correct format of Tag!')
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "Please enter the correct format of Tag",
+                    })
                     return
                 }
                 handleCreate()
@@ -104,13 +129,21 @@ const CreateWallet = () => {
         } else {
             if (step === 2) {
                 if (!walletName) {
-                    alert('Please enter wallet name!')
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "Please enter wallet name",
+                    })
                     return
                 }
             } else if (step === 3) {
                 const flag = publicKeyArr.every(item => item.tag && item.publicKey && item.publicKey.length === 66)
                 if (!flag || threshold < 1 || threshold > publicKeyArr.length) {
-                    alert('Data format error!')
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "Data format error",
+                    })
                     return
                 }
                 handleCreate()
@@ -180,9 +213,15 @@ const CreateWallet = () => {
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(descriptor).then(() => {
-            alert('Successfully copied to clipboard!')
+            toast({
+                description: "Successfully copied to clipboard",
+            })
         }).catch((err) => {
-            alert('Copy error!')
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Copy error",
+            })
             console.error("Copy error: ", err);
         });
     }

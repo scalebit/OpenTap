@@ -3,6 +3,7 @@ import { Outlet, NavLink } from "react-router-dom"
 import { useStore } from "./store"
 import './layout.scss'
 import { IWallet } from "./config/interface"
+import { Toaster } from "@/components/ui/toaster"
 
 function Layout() {
 
@@ -128,7 +129,7 @@ function Layout() {
           <Outlet />
         </div>
       </div>
-
+      <Toaster />
     </div>
   );
 }
