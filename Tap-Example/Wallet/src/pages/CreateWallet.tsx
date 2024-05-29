@@ -136,6 +136,16 @@ const CreateWallet = () => {
                     })
                     return
                 }
+
+                const isNameExisted = localWallet.some((item: IWallet) => item.walletName === walletName)
+                if (isNameExisted) {
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: "The name is the same as an existing wallet name",
+                    })
+                    return
+                }
             } else if (step === 3) {
                 const flag = publicKeyArr.every(item => item.tag && item.publicKey && item.publicKey.length === 66)
                 if (!flag || threshold < 1 || threshold > publicKeyArr.length) {
