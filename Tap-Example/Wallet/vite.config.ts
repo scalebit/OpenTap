@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import wasm from 'vite-plugin-wasm';
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
+// import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
 import path from "path"
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
@@ -24,9 +24,9 @@ export default defineConfig({
       },
       // Enable esbuild polyfill plugins
       plugins: [
-        NodeGlobalsPolyfillPlugin({
-          buffer: true
-        })
+        // NodeGlobalsPolyfillPlugin({
+        //   buffer: true
+        // })
       ]
     }
   }
