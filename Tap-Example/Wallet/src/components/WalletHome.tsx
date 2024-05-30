@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom'
 const WalletHome = (props: any) => {
     const { currentWallet } = props
     const location = useParams();
-    console.log('---:', location.address)
     return (
         <div>
             <h3 className="text-[16px] font-bold mb-3">Your Address:</h3>
