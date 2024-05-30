@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import WalletHome from '../components/WalletHome'
+import { getBalanceByAddress } from '@/config/getData'
 
 const WalletDetail = () => {
     const location = useParams();
@@ -14,9 +15,15 @@ const WalletDetail = () => {
         }
     }
 
-    useEffect(() => {
+    const getBalance = async () => {
+        const resp = await getBalanceByAddress(location.address || '')
+        console.log(resp)
+    }
 
+    useEffect(() => {
+        getBalance()
     }, [])
+
 
     return (
         <div>
