@@ -13,7 +13,7 @@ import {
     getInscriptionByNumber,
     getInscriptionFromOutpoint,
     getInscriptionsFromTx,
-} from "../taproot/indexer_rpc.js";
+} from "../rpc/indexer_rpc.js";
 
 async function start() {
     const address = 'bcrt1p5f759q606mtamm458vjf88wu4fkk9s9x7zyk0f4ejwxeu00ncuzqhurput';

@@ -9,7 +9,7 @@ import {
     Transaction,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "../taproot/bitcoin_rpc.js";
+import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "../rpc/bitcoin_rpc.js";
 import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "../bridge/musig_builder.js"
@@ -32,8 +32,8 @@ async function start() {
     // Stable Pair
     const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
 
-    //Basic Test
-    // start_p2pktr_pubkeys()
+    // Basic Test
+    // start_p2pktr(keypair)
 
     // Classic Multisig
     // await bridge_unit(keypair)

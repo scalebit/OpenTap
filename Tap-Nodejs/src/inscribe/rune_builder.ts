@@ -15,7 +15,7 @@ import {
 import * as ecc from "tiny-secp256k1";
 import ECPairFactory, { ECPairAPI, Signer } from "ecpair";
 import { taproot_address_from_asm } from "../taproot/taproot_script_builder";
-import { pushTrans, txBroadcastVeify } from "../taproot/bitcoin_rpc";
+import { pushTrans, txBroadcastVeify } from "../rpc/bitcoin_rpc";
 
 
 initEccLib(ecc);

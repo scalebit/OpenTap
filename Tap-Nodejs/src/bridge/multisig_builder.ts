@@ -3,7 +3,7 @@ import {
     Signer,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, pushBlock, pushTrans, getUTXOfromTx } from "../taproot/bitcoin_rpc.js";
+import { broadcast, pushBlock, pushTrans, getUTXOfromTx } from "../rpc/bitcoin_rpc.js";
 import { ECPairFactory, ECPairAPI } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { asm_builder, asm_csv } from "../taproot/taproot_script_builder.js"

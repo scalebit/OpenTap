@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from "axios";
 import { toXOnly } from "../taproot/utils";
 import { Signer, opcodes, script } from "bitcoinjs-lib";
 import { taproot_address_from_asm } from "../taproot/taproot_script_builder";
-import { getUTXOfromTx, txBroadcastVeify } from "../taproot/bitcoin_rpc";
+import { getUTXOfromTx, txBroadcastVeify } from "../rpc/bitcoin_rpc";
 import * as bitcoin from 'bitcoinjs-lib';
 import { regtest } from "bitcoinjs-lib/src/networks";
 

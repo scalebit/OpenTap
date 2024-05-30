@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from "axios";
-import { IUTXO } from "./utils.js"
+import { IUTXO } from "../taproot/utils.js"
 
 // baseURL: `https://blockstream.info/testnet/api`
 

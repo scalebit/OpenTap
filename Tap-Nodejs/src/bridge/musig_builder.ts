@@ -7,7 +7,7 @@ import {
     crypto,
     Psbt
 } from "bitcoinjs-lib";
-import { pushTrans, getUTXOfromTx } from "../taproot/bitcoin_rpc.js";
+import { pushTrans, getUTXOfromTx } from "../rpc/bitcoin_rpc.js";
 import { ECPairFactory, ECPairAPI } from 'ecpair';
 import { Buff } from '@cmdcode/buff'
 import * as musig from "@cmdcode/musig2"

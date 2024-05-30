@@ -1,6 +1,6 @@
 import axios from "axios";
 import { taproot_address_from_asm } from "../taproot/taproot_script_builder.js";
-import { getUTXOfromTx, txBroadcastVeify } from "../taproot/bitcoin_rpc.js";
+import { getUTXOfromTx, txBroadcastVeify } from "../rpc/bitcoin_rpc.js";
 import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { opcodes, Signer, script } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
@@ -51,6 +51,23 @@ export async function ins_insribe(keypair: Signer, p: string, data: string, txid
 
     // Finalize and send out tx
     txBroadcastVeify(psbt, addr)
+}
+
+export function ins_builder(keypair: Signer, p: string, data: string) {
+    const ins_script = [
+        toXOnly(keypair.publicKey),
+        opcodes.OP_CHECKSIG,
+        opcodes.OP_0,
+        opcodes.OP_IF,
+        Buffer.from(p, "utf8"),
+        opcodes.OP_1,
+        Buffer.concat([Buffer.from("text/plain;charset=utf-8", "utf8")]),
+        opcodes.OP_0,
+        Buffer.concat([Buffer.from(data, "utf8")]),
+        opcodes.OP_ENDIF
+    ];
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
+    return { p2tr, redeem }
 }
 
 export async function fetch_inscriptions_rpc(id: string) {

@@ -59,7 +59,7 @@ export function taproot_address_wallet(asm: Buffer, pk: string[], name: string, 
 
     const p2tr = bitcoin.payments.p2tr({
         name,
-        pubkey: toXOnly(keypair.publicKey),
+        internalPubkey: toXOnly(keypair.publicKey),
         scriptTree,
         redeem,
         network,
