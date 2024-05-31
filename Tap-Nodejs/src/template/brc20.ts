@@ -22,6 +22,7 @@ import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pa
 import * as fs from 'fs';
 import { toXOnly, tweakSigner, IUTXO, Config } from "../taproot/utils.js"
 import { ins_builder } from "../inscribe/inscription_builder.js";
+import { buffer } from "stream/consumers";
 
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
@@ -40,9 +41,9 @@ async function start() {
 
     // await inscription(keypair)
 
-    await brc20_delopy(keypair, "abcd")
+    // await brc20_delopy(keypair, "tess")
 
-    // await brc20_mint(keypair, 100)
+    await brc20_mint(keypair, 100)
 }
 
 async function start_p2pktr(keypair: Signer) {
@@ -169,7 +170,8 @@ async function brc20_delopy(keypair: Signer, tick: string) {
     // Tweak the original keypair
     const tweakedSigner = tweakSigner(keypair, { network });
 
-    const json_test_1 = {
+    const json_test_1 =
+    {
         "p": "brc-20",
         "op": "deploy",
         "tick": "" + tick + "",
@@ -177,7 +179,7 @@ async function brc20_delopy(keypair: Signer, tick: string) {
         "lim": "1000"
     }
 
-    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1, null, 2))
+    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1))
 
     const p2pktr_addr = p2tr.address ?? "";
 
@@ -198,6 +200,9 @@ async function brc20_delopy(keypair: Signer, tick: string) {
         hash: utxos.txid,
         index: utxos.vout,
         witnessUtxo: { value: utxos.value, script: p2tr.output! },
+    });
+
+    psbt.updateInput(0, {
         tapLeafScript: [
             {
                 leafVersion: redeem.redeemVersion,
@@ -205,11 +210,11 @@ async function brc20_delopy(keypair: Signer, tick: string) {
                 controlBlock: p2tr.witness![p2tr.witness!.length - 1],
             },
         ],
-    });
+    })
 
     psbt.addOutput({
-        address: "bcrt1p20eskn367x7m66jk6t5vwefg497zyxqnn00j0h5rsur8rfevwnqsmzpfma", // main wallet address 
-        value: utxos.value - 1000
+        address: "bcrt1pqj3cnv0gzm3y86sgwenl9mmry2wf5pf5k9ajlwzynwzvqufgeevqex8fyh", // main wallet address 
+        value: utxos.value - 500
     });
 
     // Auto-Sign
@@ -238,7 +243,7 @@ async function brc20_mint(keypair: Signer, amt: number) {
         "amt": "" + amt + ""
     }
 
-    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1, null, 2))
+    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1))
 
     const p2pktr_addr = p2tr.address ?? "";
 
@@ -258,7 +263,10 @@ async function brc20_mint(keypair: Signer, amt: number) {
     psbt.addInput({
         hash: utxos.txid,
         index: utxos.vout,
-        witnessUtxo: { value: utxos.value, script: p2tr.output! },
+        witnessUtxo: { value: utxos.value, script: p2tr.output! }
+    });
+
+    psbt.updateInput(0, {
         tapLeafScript: [
             {
                 leafVersion: redeem.redeemVersion,
@@ -266,10 +274,10 @@ async function brc20_mint(keypair: Signer, amt: number) {
                 controlBlock: p2tr.witness![p2tr.witness!.length - 1],
             },
         ],
-    });
+    })
 
     psbt.addOutput({
-        address: "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", // main wallet address 
+        address: "bcrt1pqj3cnv0gzm3y86sgwenl9mmry2wf5pf5k9ajlwzynwzvqufgeevqex8fyh", // main wallet address 
         value: utxos.value - 500
     });
 

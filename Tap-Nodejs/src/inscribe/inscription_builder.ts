@@ -53,18 +53,18 @@ export async function ins_insribe(keypair: Signer, p: string, data: string, txid
     txBroadcastVeify(psbt, addr)
 }
 
-// application/json
+
 export function ins_builder(keypair: Signer, p: string, data: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
         opcodes.OP_CHECKSIG,
         opcodes.OP_0,
         opcodes.OP_IF,
-        Buffer.from(p, "utf8"),
+        Buffer.from(p),
         opcodes.OP_1,
-        Buffer.concat([Buffer.from("application/json", "utf8")]),
+        Buffer.from("application/json"),
         opcodes.OP_0,
-        Buffer.concat([Buffer.from(data, "utf8")]),
+        Buffer.from(data),
         opcodes.OP_ENDIF
     ];
     let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
