@@ -1,12 +1,13 @@
 import {
     initEccLib,
     networks,
+    payments,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
 import * as tinysecp from 'tiny-secp256k1'
-import { toXOnly } from "./utils.js";
+import { toXOnly, tweakSigner } from "./utils.js";
 import { regtest } from "bitcoinjs-lib/src/networks.js";
 
 initEccLib(tinysecp as any);
@@ -14,6 +15,18 @@ const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 const network = networks.regtest;
 const network_array = [networks.bitcoin, networks.testnet, networks.regtest];
 const LEAF_VERSION_TAPSCRIPT = 192;
+
+export function get_orgin_taproot_account() {
+    const keypair = ECPair.makeRandom({ network });
+    // Tweak the original keypair
+    const tp_signer = tweakSigner(keypair, { network });
+    // Generate an address from the tweaked public key
+    const tp_account = payments.p2tr({
+        pubkey: toXOnly(tp_signer.publicKey),
+        network
+    });
+    return { tp_account, tp_signer }
+}
 
 export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): { p2tr: bitcoin.payments.Payment, redeem: any } {
     const scriptTree: Taptree = [

@@ -1,15 +1,34 @@
 import axios, { AxiosResponse } from "axios";
-import { toXOnly } from "../taproot/utils";
+import { toXOnly } from "../taproot/utils.js";
 import { Signer, opcodes, script } from "bitcoinjs-lib";
-import { taproot_address_from_asm } from "../taproot/taproot_script_builder";
-import { getUTXOfromTx, txBroadcastVeify } from "../rpc/bitcoin_rpc";
+import { taproot_address_from_asm } from "../taproot/taproot_script_builder.js";
+import { getUTXOfromTx, txBroadcastVeify } from "../rpc/bitcoin_rpc.js";
 import * as bitcoin from 'bitcoinjs-lib';
-import { regtest } from "bitcoinjs-lib/src/networks";
+import { regtest } from "bitcoinjs-lib/src/networks.js";
 
 const URL = `https://open-api.unisat.io/v2/`
 const API_KEY = `Use your own unisat API_KEY`
 const network = { network: regtest };
 
+
+export function brc_builder(keypair: Signer, data: string) {
+    const ins_script = [
+        toXOnly(keypair.publicKey),
+        opcodes.OP_CHECKSIG,
+        opcodes.OP_FALSE,
+        opcodes.OP_IF,
+        Buffer.from("ord"),
+        1,
+        1,
+        Buffer.from("application/json"),
+        opcodes.OP_0,
+        Buffer.from(data),
+        opcodes.OP_ENDIF
+    ];
+
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
+    return { p2tr, redeem }
+}
 
 export function brc20_op(op: string, tick: string, amt: string, lim: string) {
     switch (op) {

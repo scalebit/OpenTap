@@ -9,64 +9,21 @@ import { toXOnly } from "../taproot/utils.js";
 const URL = `https://turbo.ordinalswallet.com`
 const network = { network: regtest };
 
-export async function ins_insribe(keypair: Signer, p: string, data: string, txid: string) {
+export function ins_builder(keypair: Signer, p: string, data: string, type: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
         opcodes.OP_CHECKSIG,
-        opcodes.OP_0,
+        opcodes.OP_FALSE,
         opcodes.OP_IF,
         Buffer.from(p),
         1,
-        Buffer.from('application/json'),
+        1,
+        Buffer.from(type),
         opcodes.OP_0,
         Buffer.from(data),
         opcodes.OP_ENDIF
     ];
-    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
-    let addr = p2tr.address ?? "";
 
-    const utxos = await getUTXOfromTx(txid, addr)
-    console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
-
-    const psbt = new bitcoin.Psbt(network);
-
-    psbt.addInput({
-        hash: utxos.txid,
-        index: utxos.vout,
-        witnessUtxo: { value: utxos.value, script: p2tr.output! },
-    });
-
-    psbt.updateInput(0, {
-        tapLeafScript: [
-            {
-                leafVersion: redeem.redeemVersion,
-                script: redeem.output,
-                controlBlock: p2tr.witness![p2tr.witness!.length - 1],
-            },
-        ],
-    });
-
-    psbt.addOutput({ value: utxos.value - 150, address: p2tr.address! });
-    psbt.signInput(0, keypair);
-
-    // Finalize and send out tx
-    txBroadcastVeify(psbt, addr)
-}
-
-
-export function ins_builder(keypair: Signer, p: string, data: string) {
-    const ins_script = [
-        toXOnly(keypair.publicKey),
-        opcodes.OP_CHECKSIG,
-        opcodes.OP_0,
-        opcodes.OP_IF,
-        Buffer.from(p),
-        opcodes.OP_1,
-        Buffer.from("application/json"),
-        opcodes.OP_0,
-        Buffer.from(data),
-        opcodes.OP_ENDIF
-    ];
     let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
     return { p2tr, redeem }
 }
@@ -119,3 +76,46 @@ export async function fetch_wallet_rpc(address: string) {
 }
 
 
+export async function ins_workflow(keypair: Signer, p: string, data: string, txid: string, type: string) {
+    const ins_script = [
+        toXOnly(keypair.publicKey),
+        opcodes.OP_CHECKSIG,
+        opcodes.OP_0,
+        opcodes.OP_IF,
+        Buffer.from(p),
+        opcodes.OP_1,
+        Buffer.from(type),
+        opcodes.OP_0,
+        Buffer.from(data),
+        opcodes.OP_ENDIF
+    ];
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
+    let addr = p2tr.address ?? "";
+
+    const utxos = await getUTXOfromTx(txid, addr)
+    console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
+
+    const psbt = new bitcoin.Psbt(network);
+
+    psbt.addInput({
+        hash: utxos.txid,
+        index: utxos.vout,
+        witnessUtxo: { value: utxos.value, script: p2tr.output! },
+    });
+
+    psbt.updateInput(0, {
+        tapLeafScript: [
+            {
+                leafVersion: redeem.redeemVersion,
+                script: redeem.output,
+                controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+            },
+        ],
+    });
+
+    psbt.addOutput({ value: utxos.value - 150, address: p2tr.address! });
+    psbt.signInput(0, keypair);
+
+    // Finalize and send out tx
+    txBroadcastVeify(psbt, addr)
+}
