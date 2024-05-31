@@ -29,22 +29,20 @@ const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 const network = networks.regtest;
 const LEAF_VERSION_TAPSCRIPT = 192;
 
-const json_test_1 = {
-    "p": "brc-20",
-    "op": "deploy",
-    "tick": "test",
-    "max": "21000000",
-    "lim": "1000"
-}
-
 async function start() {
     // Stable Pair
-    const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
+    // const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
+
+    const keypair = ECPair.makeRandom({ network });
 
     // Basic Test
     // await start_p2pktr(keypair)
 
-    await inscription(keypair)
+    // await inscription(keypair)
+
+    await brc20_delopy(keypair, "abcd")
+
+    // await brc20_mint(keypair, 100)
 }
 
 async function start_p2pktr(keypair: Signer) {
@@ -109,10 +107,13 @@ async function start_p2pktr(keypair: Signer) {
 
 // inscription 
 async function inscription(keypair: Signer) {
-    console.log(`Running "Inscribe the inscription and send to default"`);
-
     // Tweak the original keypair
     const tweakedSigner = tweakSigner(keypair, { network });
+
+    const json_test_1 = {
+        "name": "hello world"
+    }
+
     const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1))
 
     const p2pktr_addr = p2tr.address ?? "";
@@ -164,12 +165,80 @@ async function inscription(keypair: Signer) {
 }
 
 // inscription 
-async function brc20_delopy(keypair: Signer) {
-    console.log(`Running "Inscribe the inscription and send to default"`);
-
+async function brc20_delopy(keypair: Signer, tick: string) {
     // Tweak the original keypair
     const tweakedSigner = tweakSigner(keypair, { network });
-    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1))
+
+    const json_test_1 = {
+        "p": "brc-20",
+        "op": "deploy",
+        "tick": "" + tick + "",
+        "max": "25000000",
+        "lim": "1000"
+    }
+
+    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1, null, 2))
+
+    const p2pktr_addr = p2tr.address ?? "";
+
+    console.log(`Waiting till UTXO is detected at this Address: ${p2pktr_addr}`)
+
+    let temp_trans = await pushTrans(p2pktr_addr)
+
+    console.log("the new txid is:", temp_trans)
+
+    await pushBlock(p2pktr_addr)
+
+    const utxos = await getUTXOfromTx(temp_trans, p2pktr_addr)
+    console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
+
+    const psbt = new Psbt({ network });
+
+    psbt.addInput({
+        hash: utxos.txid,
+        index: utxos.vout,
+        witnessUtxo: { value: utxos.value, script: p2tr.output! },
+        tapLeafScript: [
+            {
+                leafVersion: redeem.redeemVersion,
+                script: redeem.output,
+                controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+            },
+        ],
+    });
+
+    psbt.addOutput({
+        address: "bcrt1p20eskn367x7m66jk6t5vwefg497zyxqnn00j0h5rsur8rfevwnqsmzpfma", // main wallet address 
+        value: utxos.value - 1000
+    });
+
+    // Auto-Sign
+    psbt.signInput(0, tweakedSigner);
+    psbt.finalizeAllInputs();
+
+    const tx = psbt.extractTransaction();
+    console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
+    console.log("Txid is:", tx.getId());
+
+    const txHex = await broadcast(tx.toHex());
+    console.log(`Success! TxHex is ${txHex}`);
+
+    // generate new block to lookup
+    await pushBlock(p2pktr_addr)
+}
+
+async function brc20_mint(keypair: Signer, amt: number) {
+    // Tweak the original keypair
+    const tweakedSigner = tweakSigner(keypair, { network });
+
+    const json_test_1 = {
+        "p": "brc-20",
+        "op": "mint",
+        "tick": "test",
+        "amt": "" + amt + ""
+    }
+
+    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1, null, 2))
 
     const p2pktr_addr = p2tr.address ?? "";
 

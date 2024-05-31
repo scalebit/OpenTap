@@ -17,7 +17,7 @@ export async function ins_insribe(keypair: Signer, p: string, data: string, txid
         opcodes.OP_IF,
         Buffer.from(p),
         1,
-        Buffer.from('text/plain;charset=utf-8'),
+        Buffer.from('application/json'),
         opcodes.OP_0,
         Buffer.from(data),
         opcodes.OP_ENDIF
@@ -53,6 +53,7 @@ export async function ins_insribe(keypair: Signer, p: string, data: string, txid
     txBroadcastVeify(psbt, addr)
 }
 
+// application/json
 export function ins_builder(keypair: Signer, p: string, data: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
@@ -61,7 +62,7 @@ export function ins_builder(keypair: Signer, p: string, data: string) {
         opcodes.OP_IF,
         Buffer.from(p, "utf8"),
         opcodes.OP_1,
-        Buffer.concat([Buffer.from("text/plain;charset=utf-8", "utf8")]),
+        Buffer.concat([Buffer.from("application/json", "utf8")]),
         opcodes.OP_0,
         Buffer.concat([Buffer.from(data, "utf8")]),
         opcodes.OP_ENDIF
