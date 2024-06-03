@@ -16,10 +16,8 @@ const network = networks.regtest;
 const network_array = [networks.bitcoin, networks.testnet, networks.regtest];
 const LEAF_VERSION_TAPSCRIPT = 192;
 
-export function get_orgin_taproot_account() {
-    const keypair = ECPair.makeRandom({ network });
-    // Tweak the original keypair
-    const tp_signer = tweakSigner(keypair, { network });
+export function get_taproot_account(keypair: any) {
+    const tp_signer = keypair;
     // Generate an address from the tweaked public key
     const tp_account = payments.p2tr({
         pubkey: toXOnly(tp_signer.publicKey),
