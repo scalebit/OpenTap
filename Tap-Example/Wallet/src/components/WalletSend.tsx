@@ -66,8 +66,8 @@ const WalletSend = (props: any) => {
                     <div className="mt-5">
                         <h3 className="text-[16px] font-bold mb-3">To:</h3>
                         <div className="flex mb-2">
-                        <input type="text" placeholder="Address" className="input input-bordered w-[400px] mr-2" />
-                        <input type="text" placeholder="Amount" className="input input-bordered w-[100px]" />
+                            <input type="text" placeholder="Address" className="input input-bordered w-[400px] mr-2" />
+                            <input type="text" placeholder="Amount" className="input input-bordered w-[100px]" />
                         </div>
                     </div>
                 </div>

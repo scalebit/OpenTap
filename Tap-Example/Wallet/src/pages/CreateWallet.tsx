@@ -18,6 +18,8 @@ const CreateWallet = () => {
 
     const [isImport, setIsImport] = useState(false)
 
+    const [isReg, setIsReg] = useState(false)
+
     const [step, setStep] = useState(1)
 
     const [walletName, setWalletName] = useState('')
@@ -66,9 +68,24 @@ const CreateWallet = () => {
         setPublicKeyArr(arr_)
     }
 
-    const nextStep = (isImport_?: boolean) => {
+    const nextStep = (isImport_?: boolean, isReg_?: boolean) => {
         if (step === 1) {
             setIsImport(isImport_ || false)
+            setIsReg(isReg_ || false)
+
+            if (!publicKey && !isReg) {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Please connect wallet or click Regtest mode twice",
+                })
+                return
+            }
+
+            // TODO: If Regtest, change network
+            // if (isReg){
+            //     network = "regtest"
+            // }
         }
 
         if (isImport) {
@@ -279,7 +296,7 @@ const CreateWallet = () => {
             {
                 publicKeyArr.map((item: IPublicKey, index: number) => <div key={index} className='flex mb-3'>
                     <input type="text" placeholder="Tag" value={item.tag} onChange={(e) => changePK('tag', e.target.value, index)} className="input input-bordered w-[100px] mr-2" />
-                    <input type="text" placeholder="Publick Key" disabled={index === 0} value={item.publicKey} onChange={(e) => changePK('publicKey', e.target.value, index)} className="input input-bordered flex-1" />
+                    <input type="text" placeholder="Publick Key" disabled={isReg ? index === -1 : index === 0} value={item.publicKey} onChange={(e) => changePK('publicKey', e.target.value, index)} className="input input-bordered flex-1" />
                     {
                         index > 0 ? <button className="btn btn-circle ml-2" onClick={() => delPublicKey(index)}>
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -359,7 +376,8 @@ const CreateWallet = () => {
                     <p>Or using descriptor to Import a wallet.</p>
                     <div className='flex mt-10'>
                         <button className='btn w-[150px] btn-primary mr-5' onClick={() => nextStep(false)}>Next</button>
-                        <button className='btn w-[150px] btn-neutral' onClick={() => nextStep(true)}>Import</button>
+                        <button className='btn w-[150px] btn-neutral mr-5' onClick={() => nextStep(true)}>Import</button>
+                        <button className='btn w-[150px] btn mr-5' onClick={() => nextStep(false, true)}>Regtest Mode</button>
                     </div>
                 </div> : step === 2 ? Step2DOM : step === 3 ? Step3DOM : Step4DOM
             }
