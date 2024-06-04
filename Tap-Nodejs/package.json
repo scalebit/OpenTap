@@ -12,20 +12,22 @@
     "chai": "^5.1.0",
     "mocha": "^10.4.0",
     "should": "^13.2.3",
-    "ts-node": "^10.9.2",
-    "typescript": "^4.9.5"
+    "ts-node": "^10.9.2"
   },
   "dependencies": {
     "@cmdcode/crypto-tools": "^2.7.6",
     "@cmdcode/musig2": "^2.4.3",
+    "@magiceden-oss/runestone-lib": "^1.0.2",
     "axios": "^1.3.2",
     "big-varuint-js": "^0.2.1",
     "bip-schnorr": "^0.6.7",
     "bitcoinjs-lib": "^6.1.5",
     "ecpair": "^2.1.0",
     "random-bytes": "^1.0.0",
+    "runelib": "^1.0.6",
     "runestone-js": "^0.3.0",
     "tiny-secp256k1": "^2.2.3",
+    "typescript": "^5.4.5",
     "varuint-bitcoin": "^1.1.2"
   },
   "scripts": {
