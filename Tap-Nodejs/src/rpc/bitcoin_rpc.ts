@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from "axios";
 import { IUTXO } from "../taproot/utils.js"
+import {Etching, Runestone} from "runelib";
 
 // baseURL: `https://blockstream.info/testnet/api`
 
@@ -233,3 +234,32 @@ export async function broadcastraw(txHex: string) {
 
 }
 
+export async function getRunefromTx(txid: string) {
+    return new Promise<Runestone>((resolve, reject) => {
+        const data = {
+            jsonrpc: "2.0",
+            params: [txid, true],
+            id: "curltext",
+            method: 'getrawtransaction'
+        }
+        try {
+            axios.post(URL, data).then(
+                firstResponse => {
+                    // Parse to Json
+                    let txjson = JSON.parse(JSON.stringify(firstResponse.data))
+                    console.log(txjson.result.hex)
+                    const rune_stone = Runestone.decipher(txjson.result.hex).value() as Runestone;
+                    if (rune_stone != null){
+                        resolve(rune_stone)
+                        
+                    }else{
+                        console.log("No Rune in this tx")
+                    }
+
+                })
+        }
+        catch (error) {
+            reject(error);
+        }
+    });
+}
