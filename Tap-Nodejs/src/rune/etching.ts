@@ -10,7 +10,7 @@ import * as ecc from "tiny-secp256k1";
 import ECPairFactory, { ECPairAPI } from "ecpair";
 import { toXOnly } from "../taproot/utils.js"
 import { Taptree } from "bitcoinjs-lib/src/types";
-import { pushTrans, getUTXOfromTx,pushBlock,broadcast } from "../rpc/bitcoin_rpc.js";
+import { pushTrans, getUTXOfromTx,pushBlock,broadcast,getRunefromTx } from "../rpc/bitcoin_rpc.js";
 const network = networks.regtest;
 
 
@@ -116,8 +116,12 @@ const txHex = await broadcast(tx.toHex());
 console.log(`Success! TxHex is ${txHex}`);
 
 
-const stone_test = Runestone.decipher(tx.toHex()).value() as Runestone;
-const etching_test = stone_test.etching.value() as Etching;
-console.log(`Stone Name:${etching_test.rune.value()?.name}`)
+// const stone_test = Runestone.decipher(tx.toHex()).value() as Runestone;
+// const etching_test = stone_test.etching.value() as Etching;
+// console.log(`Stone Name:${etching_test.rune.value()?.name}`)
 
 await pushBlock(address)
+
+const stone_test = await getRunefromTx(txHex)
+const etching_test = stone_test.etching.value() as Etching;
+console.log(`Stone Name:${etching_test.rune.value()?.name}`)
