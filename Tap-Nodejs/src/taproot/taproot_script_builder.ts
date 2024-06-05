@@ -16,6 +16,25 @@ const network = networks.regtest;
 const network_array = [networks.bitcoin, networks.testnet, networks.regtest];
 const LEAF_VERSION_TAPSCRIPT = 192;
 
+export function taproot_multisig_raw_account(keypair: any, threshold: number, keynum: number) {
+    const leafKeys = [];
+    const leafKeys_WIF = [];
+    const leafPubkeys = [];
+
+    for (let i = 0; i < keynum; i++) {
+        const leafKey = ECPair.makeRandom({ network });
+        leafKeys_WIF.push(leafKey.toWIF())
+        leafKeys.push(leafKey);
+        leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
+    }
+
+    const leafScript = asm_builder(leafPubkeys, threshold);
+
+    const { p2tr, redeem } = taproot_address_from_asm(leafScript, keypair)
+
+    return { leafScript, leafKeys_WIF, p2tr, redeem }
+}
+
 export function get_taproot_account(keypair: any) {
     const tp_signer = keypair;
     // Generate an address from the tweaked public key

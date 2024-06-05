@@ -102,7 +102,7 @@ export function invert_json_p2tr(p2tr: string) {
         }
         return v;
     });
-    const stringArray = p2pktr.pubkeys!.map(buffer => buffer.toString('hex'));
+    const stringArray = p2pktr.pubkeys?.map(buffer => buffer.toString('hex'));
     return { p2pktr, stringArray };
 }
 

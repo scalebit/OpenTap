@@ -16,6 +16,20 @@ export default defineConfig({
   build: {
     target: 'esnext' //browsers can handle the latest ES features
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3002',
+        changeOrigin: true,
+        // rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/unisatapi': {
+        target: 'https://open-api.unisat.io/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/unisatapi/, '')
+      }
+    }
+  },
   optimizeDeps: {
     esbuildOptions: {
       // Node.js global to browser globalThis

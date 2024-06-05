@@ -9,7 +9,7 @@ import {
     Transaction,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "../rpc/bitcoin_rpc.js";
+import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx, getAllUTXOfromAddress } from "../rpc/bitcoin_rpc.js";
 import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "../bridge/musig_builder.js"
@@ -20,7 +20,10 @@ import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { asm_builder, asm_csv, } from "../taproot/taproot_script_builder.js"
 import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "../bridge/multisig_builder.js"
 import * as fs from 'fs';
-import { toXOnly, tweakSigner, IUTXO, Config } from "../taproot/utils.js"
+import { toXOnly, tweakSigner, IUTXO, Config, invert_json_p2tr } from "../taproot/utils.js"
+import { taproot_address_from_asm, taproot_multisig_raw_account } from "../taproot/taproot_script_builder.js"
+import { auto_choose_UTXO, build_psbt, pay_psbt, sign_psbt } from "../taproot/transaction_builder.js";
+import { sign } from "crypto";
 
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
@@ -31,6 +34,18 @@ const LEAF_VERSION_TAPSCRIPT = 192;
 async function start() {
     // Stable Pair
     const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
+
+    // Get Stable Multi-Sig
+    // const { leafKeys_WIF, p2tr, redeem } = taproot_multisig_raw_account(keypair, 2, 3)
+    // fs.writeFileSync('./dump/leafKeys_WIF.json', JSON.stringify(leafKeys_WIF))
+    // fs.writeFileSync('./dump/p2tr.json', JSON.stringify(p2tr))
+    // fs.writeFileSync('./dump/redeem.json', JSON.stringify(redeem))
+
+    // Psbt Test
+    const leafKeys_WIF = invert_json_p2tr(fs.readFileSync("./dump/leafKeys_WIF.json", "utf8"))
+    const p2tr = invert_json_p2tr(fs.readFileSync("./dump/p2tr.json", "utf8"))
+    const redeem = invert_json_p2tr(fs.readFileSync("./dump/redeem.json", "utf8"))
+    await start_psbt(leafKeys_WIF.p2pktr, p2tr.p2pktr, redeem.p2pktr, keypair, 1500, 500)
 
     // Basic Test
     // start_p2pktr(keypair)
@@ -55,6 +70,31 @@ async function start() {
 
     // Escape hatch
     // await bridge_unlock_with_dump(2)
+}
+
+async function start_psbt(leafKeys_WIF: any, p2tr: any, redeem: any, keypair: Signer, amt: number, fee: number) {
+
+    console.log(`Waiting till UTXO is detected at this Address: ${p2tr.address!}`)
+
+    let temp_trans = await pushTrans(p2tr.address!)
+    console.log("the new txid is:", temp_trans)
+
+    await pushBlock(p2tr.address!)
+
+    let utxos = await getAllUTXOfromAddress(p2tr.address!)
+    utxos = auto_choose_UTXO(utxos, amt)
+    console.log(utxos)
+
+    let psbt_origin: string = build_psbt(redeem, utxos, p2tr.address, "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", network, p2tr, amt, fee)
+    let psbt_ = ''
+
+    for (var i = 0; i < leafKeys_WIF.length; i++) {
+        psbt_ = sign_psbt(psbt_origin, leafKeys_WIF[i], network)
+        psbt_origin = psbt_
+    }
+
+    await pay_psbt(psbt_origin)
+    await pushBlock(p2tr.address!)
 }
 
 // Basic test

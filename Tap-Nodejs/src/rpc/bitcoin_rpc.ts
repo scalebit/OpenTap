@@ -179,6 +179,45 @@ export async function getALLUTXOfromTx(txid: string, address: string) {
     });
 }
 
+export async function getAllUTXOfromAddress(address: string) {
+    return new Promise<IUTXO[]>((resolve, reject) => {
+        const data = {
+            jsonrpc: "2.0",
+            params: [`start`, [`addr(${address})`]],
+            id: "curltext",
+            method: 'scantxoutset'
+        }
+        try {
+            axios.post(URL, data).then(
+                firstResponse => {
+                    let ALL_UTXO: IUTXO[] = []
+                    // Parse to Json
+                    let txjson = JSON.parse(JSON.stringify(firstResponse.data))
+                    // console.log(txjson.result.length)
+                    for (var i = 0; i < txjson.result.unspents.length; i++) {
+                        let UTXO: IUTXO = {
+                            txid: txjson.result.unspents[i].txid,
+                            vout: txjson.result.unspents[i].vout,
+                            address,
+                            status: {
+                                confirmed: true,
+                                block_height: txjson.result.unspents[i].height,
+                                block_hash: "",
+                                block_time: 0,
+                            },
+                            value: parseInt((txjson.result.unspents[i].amount * 100000000).toString())
+                        }
+                        ALL_UTXO.push(UTXO)
+                    }
+                    resolve(ALL_UTXO);
+                })
+        }
+        catch (error) {
+            reject(error);
+        }
+    });
+}
+
 export async function broadcast(txHex: string) {
     return new Promise<string>((resolve, reject) => {
         const data = {
