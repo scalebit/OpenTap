@@ -15,6 +15,7 @@ import * as tinysecp from 'tiny-secp256k1'
 import { schnorr } from '@noble/curves/secp256k1'
 import { sha256 } from "bitcoinjs-lib/src/crypto.js";
 import { toXOnly } from "../taproot/utils.js"
+import { buffer } from "stream/consumers";
 
 initEccLib(tinysecp);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
@@ -78,8 +79,7 @@ export async function test2() {
         psbt.addInput({
             hash: utxos.txid,
             index: utxos.vout,
-            witnessUtxo: { value: utxos.value, script: p2pktr.output! },
-            tapInternalKey: pub
+            witnessUtxo: { value: utxos.value, script: p2pktr.output! }
         });
 
         // utxos.value
@@ -103,23 +103,23 @@ export async function test2() {
         // Sign hash
         let sign = get_agg_sign(wallets, options, msg!)
 
-        const partialSig = [
-            {
-                pubkey: pub,
-                signature: sign,
-            },
-        ];
-        psbt.updateInput(0, { partialSig })
+        // const partialSig = [
+        //     {
+        //         pubkey: pub,
+        //         signature: sign,
+        //     },
+        // ];
+        // psbt.updateInput(0, { partialSig })
 
         psbt.updateInput
         psbt.finalizeAllInputs();
 
         console.log("Input Finalized")
 
-        let isValid1 = psbt.validateSignaturesOfInput(0, schnorrValidator, pub)
+        let isValid1 = psbt.validateSignaturesOfInput(0, schnorrValidator, Buffer.from(pub))
         if (isValid1) { console.log('The test demo should produce a valid signature.') }
     } catch (error) {
-        console.error('发生错误:', error);
+        console.error('Error:', error);
     }
 }
 

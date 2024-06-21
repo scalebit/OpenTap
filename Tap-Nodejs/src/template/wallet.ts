@@ -9,7 +9,7 @@ import {
     Transaction,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx, getAllUTXOfromAddress } from "../rpc/bitcoin_rpc.js";
+import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx, getAllUTXOfromAddress, getBRC20FromUTXO, getBRC20FromALLUTXO, getTick } from "../rpc/bitcoin_rpc.js";
 import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "../bridge/musig_builder.js"
@@ -20,10 +20,11 @@ import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { asm_builder, asm_csv, } from "../taproot/taproot_script_builder.js"
 import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "../bridge/multisig_builder.js"
 import * as fs from 'fs';
-import { toXOnly, tweakSigner, IUTXO, Config, invert_json_p2tr } from "../taproot/utils.js"
+import { toXOnly, tweakSigner, IUTXO, Config, invert_json_p2tr, invert_json_to_obj, choose_network } from "../taproot/utils.js"
 import { taproot_address_from_asm, taproot_multisig_raw_account } from "../taproot/taproot_script_builder.js"
-import { auto_choose_UTXO, build_psbt, pay_psbt, sign_psbt } from "../taproot/transaction_builder.js";
+import { auto_choose_UTXO, auto_choose_brc20_UTXO, build_psbt, pay_psbt, pay_psbt_hex, sign_psbt } from "../taproot/transaction_builder.js";
 import { sign } from "crypto";
+import { getTickerInfo } from "../rpc/indexer_rpc.js";
 
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
@@ -42,10 +43,18 @@ async function start() {
     // fs.writeFileSync('./dump/redeem.json', JSON.stringify(redeem))
 
     // Psbt Test
-    const leafKeys_WIF = invert_json_p2tr(fs.readFileSync("./dump/leafKeys_WIF.json", "utf8"))
-    const p2tr = invert_json_p2tr(fs.readFileSync("./dump/p2tr.json", "utf8"))
-    const redeem = invert_json_p2tr(fs.readFileSync("./dump/redeem.json", "utf8"))
-    await start_psbt(leafKeys_WIF.p2pktr, p2tr.p2pktr, redeem.p2pktr, keypair, 1500, 500)
+    // const leafKeys_WIF = invert_json_to_obj(fs.readFileSync("./dump/leafKeys_WIF.json", "utf8"))
+    // const p2tr = invert_json_p2tr(fs.readFileSync("./dump/p2tr.json", "utf8"))
+    // const redeem = invert_json_p2tr(fs.readFileSync("./dump/redeem.json", "utf8"))
+
+    // for (const key of leafKeys_WIF) {
+    //     const pk = toXOnly(ECPair.fromWIF(key, network).publicKey).toString('hex')
+    //     console.log(pk)
+    // }
+
+    // await start_psbt(leafKeys_WIF.p2pktr, p2tr.p2pktr, redeem.p2pktr, keypair, 1500, 500)
+
+    // await start_psbt(2, 4, keypair, 1111, 555)
 
     // Basic Test
     // start_p2pktr(keypair)
@@ -70,9 +79,175 @@ async function start() {
 
     // Escape hatch
     // await bridge_unlock_with_dump(2)
+
+    // await send_faccut("bcrt1pkcvuxmpvencq8kd68g7k04tynjzwxeq7mg39xmclyxea3p9q335sywaxwu")
+    // await check_fund("bcrt1pkcvuxmpvencq8kd68g7k04tynjzwxeq7mg39xmclyxea3p9q335sywaxwu")
+    // await send_raw("02000000000101d0629013827ed48a57dc0826727433f16e63ae456a44d29f3e34dfce85838f170100000000ffffffff025704000000000000225120b619c36c2cccf003d9ba3a3d67d5649c84e3641eda22536f1f21b3d884a08c695026310100000000225120b619c36c2cccf003d9ba3a3d67d5649c84e3641eda22536f1f21b3d884a08c69044051e77a099cfeeb8c0fca79464f766acba8dcad6a1c4b9d143c339208c000d7fce023ef8f25ad288751046f26bb6cdd74f76a2117df844a9df5d52df328eff1b040f53fca1db8b9b4bd4796757fbbc489dfd8af1ba3796f2eec361def3577b59c6759697ccbd0902c25ed8e950b52b558accb36e6090b5cf9e4ce3e57021e575f2f68206ab8323bed8417b5175f18e356507a26d1155f18a60b82e697331998613caebcac2094706ca3f147ad1baebc4edd059c59e88fd1d1a3568d93a9161c3ac11d2aef0cba202649c3efd8bd6893195be78b2527caaa45ba94a97664f3d4f1ae754c5321b9a3ba52a221c089702b9d065eb206cf709ce752b1a3ff2a0920d713c52f241231d7a8dc19316a00000000"")
+    await get_brc20_txid("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w")
 }
 
-async function start_psbt(leafKeys_WIF: any, p2tr: any, redeem: any, keypair: Signer, amt: number, fee: number) {
+// Get all non-brc20 UTXO 
+// Get all brc20 UTXO
+
+async function get_brc20_txid(address: string) {
+    let utxos = await getAllUTXOfromAddress(address)
+    let brc20utxo = await getBRC20FromALLUTXO(utxos)
+    console.log(brc20utxo)
+    let ticker = await getTickerInfo("test")
+    let decimal = ticker.decimal
+    let brcutxo = auto_choose_brc20_UTXO(brc20utxo, 50, decimal, "test")
+    console.log(brcutxo)
+}
+
+async function send_raw(txraw: string) {
+    await broadcast(txraw)
+}
+
+async function send_faccut(address: any) {
+    let temp_trans = await pushTrans(address)
+    console.log("the new txid is:", temp_trans)
+
+    await pushBlock("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w")
+}
+
+async function check_fund(address: any) {
+    let utxos = await getAllUTXOfromAddress(address)
+    console.log(auto_choose_UTXO(utxos, 1000))
+}
+
+
+async function start_psbt(threshold: number, num: number, keypair: Signer, amt: number, fee: number) {
+
+    const { leafKeys_WIF, p2tr, redeem } = taproot_multisig_raw_account(keypair, threshold, num, "regtest")
+
+    console.log(`Waiting till UTXO is detected at this Address: ${p2tr.address!}`)
+
+    let temp_trans = await pushTrans(p2tr.address!)
+    console.log("the new txid is:", temp_trans)
+
+    const utxo = await getUTXOfromTx(temp_trans, p2tr.address!)
+
+    let psbt_origin: string = build_psbt(redeem, [utxo], p2tr.address, "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", "regtest", p2tr, amt, fee)
+    let psbt_ = ''
+
+    for (var i = 0; i < threshold; i++) {
+        psbt_ = sign_psbt(psbt_origin, leafKeys_WIF[i], "regtest")
+        psbt_origin = psbt_
+    }
+
+    let leafKeys = []
+
+    for (var i = 0; i < leafKeys_WIF.length; i++) {
+        leafKeys.push(ECPair.fromWIF(leafKeys_WIF[i], network).publicKey)
+    }
+
+    const txhex = await pay_psbt_hex(psbt_origin, threshold, num, "regtest", leafKeys)
+
+    await broadcast(txhex)
+    // await pushBlock("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w")
+}
+
+// async function start_psbt(threshold: number, num: number, keypair: Signer, amt: number, fee: number) {
+
+// const leafKeys = [];
+// const leafKeys_useless = [];
+// const leafPubkeys = [];
+// const leafPubkeys_useless = [];
+// // const leafKeys_WIF = [];
+
+// for (let i = 0; i < num; i++) {
+//     // const leafKey = ECPair.makeRandom({ network });
+//     // leafKeys.push(leafKey);
+//     // leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
+//     // leafKeys_WIF.push(leafKey.toWIF())
+
+//     const leafKey_useless = ECPair.makeRandom({ network });
+//     leafKeys_useless.push(leafKey_useless);
+//     leafPubkeys_useless.push(toXOnly(leafKey_useless.publicKey).toString('hex'));
+// }
+
+// const { leafKeys_WIF, p2tr, redeem } = taproot_multisig_raw_account(keypair, threshold, num, "regtest")
+
+// // const leafScript = asm_builder(leafPubkeys, threshold);
+
+// // const scriptTree: Taptree =
+// // {
+// //     output: leafScript,
+// // };
+
+// // const redeem = {
+// //     output: leafScript,
+// //     redeemVersion: LEAF_VERSION_TAPSCRIPT,
+// // };
+
+// // const p2tr = bitcoin.payments.p2tr({
+// //     internalPubkey: toXOnly(keypair.publicKey),
+// //     scriptTree,
+// //     redeem,
+// //     network: choose_network(`regtest`),
+// // });
+
+
+//     console.log(`Waiting till UTXO is detected at this Address: ${p2tr.address!}`)
+
+//     let temp_trans = await pushTrans(p2tr.address!)
+//     console.log("the new txid is:", temp_trans)
+
+//     const utxos = await getUTXOfromTx(temp_trans, p2tr.address!)
+
+//     // let psbt_origin: string = build_psbt(redeem, [utxo], p2tr.address, "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", "regtest", p2tr, amt, fee)
+//     // let psbt_ = ''
+
+//     // for (var i = 0; i < threshold; i++) {
+//     //     psbt_ = sign_psbt(psbt_origin, leafKeys_WIF[i], "regtest")
+//     //     psbt_origin = psbt_
+//     // }
+
+//     const psbt = new bitcoin.Psbt({ network: choose_network(`regtest`) });
+
+//     psbt.addInput({
+//         hash: utxos.txid,
+//         index: utxos.vout,
+//         witnessUtxo: { value: utxos.value, script: p2tr.output! },
+//     });
+
+//     psbt.updateInput(0, {
+//         tapLeafScript: [
+//             {
+//                 leafVersion: redeem.redeemVersion,
+//                 script: redeem.output,
+//                 controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+//             },
+//         ],
+//     });
+
+//     psbt.addOutput({ value: utxos.value - 150, address: p2tr.address! });
+
+//     // psbt.addOutput({ value: utxos.value - 150, address: p2tr.address! });
+
+//     // Threshold signers
+//     for (var i = 0; i < threshold; i++) {
+//         psbt.signInput(0, ECPair.fromWIF(leafKeys_WIF[i], choose_network(`regtest`)));
+//     }
+
+//     // All input have to be signed
+//     // So generated some random private key to sign
+
+//     // Useless signers
+//     for (var i = threshold; i < leafKeys_WIF.length; i++) {
+//         psbt.signInput(0, leafKeys_useless[i]);
+//     }
+
+//     psbt.finalizeAllInputs();
+
+//     const tx = psbt.extractTransaction();
+//     console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
+//     console.log("Txid is:", tx.getId());
+
+//     await broadcast(tx.toHex())
+// }
+
+async function start_psbt_stable(leafKeys_WIF: any, p2tr: any, redeem: any, keypair: Signer, amt: number, fee: number) {
 
     console.log(`Waiting till UTXO is detected at this Address: ${p2tr.address!}`)
 
@@ -303,7 +478,7 @@ async function bridge_workflow(keypair: Signer) {
         leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
 
         const leafKey_useless = ECPair.makeRandom({ network });
-        leafKeys_useless.push(leafKey);
+        leafKeys_useless.push(leafKey_useless);
         leafPubkeys_useless.push(toXOnly(leafKey_useless.publicKey).toString('hex'));
     }
 

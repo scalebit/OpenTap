@@ -7,22 +7,21 @@ import * as bitcoin from 'bitcoinjs-lib';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
 import * as tinysecp from 'tiny-secp256k1'
-import { toXOnly, tweakSigner } from "./utils.js";
+import { choose_network, toXOnly, tweakSigner } from "./utils.js";
 import { regtest } from "bitcoinjs-lib/src/networks.js";
 
 initEccLib(tinysecp as any);
+const network_ = "regtest"
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
-const network = networks.regtest;
-const network_array = [networks.bitcoin, networks.testnet, networks.regtest];
 const LEAF_VERSION_TAPSCRIPT = 192;
 
-export function taproot_multisig_raw_account(keypair: any, threshold: number, keynum: number) {
+export function taproot_multisig_raw_account(keypair: any, threshold: number, keynum: number, network: string) {
     const leafKeys = [];
     const leafKeys_WIF = [];
     const leafPubkeys = [];
 
     for (let i = 0; i < keynum; i++) {
-        const leafKey = ECPair.makeRandom({ network });
+        const leafKey = ECPair.makeRandom({ network: choose_network(network) });
         leafKeys_WIF.push(leafKey.toWIF())
         leafKeys.push(leafKey);
         leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
@@ -30,30 +29,26 @@ export function taproot_multisig_raw_account(keypair: any, threshold: number, ke
 
     const leafScript = asm_builder(leafPubkeys, threshold);
 
-    const { p2tr, redeem } = taproot_address_from_asm(leafScript, keypair)
+    const { p2tr, redeem } = taproot_address_from_asm(leafScript, keypair, network)
 
     return { leafScript, leafKeys_WIF, p2tr, redeem }
 }
 
-export function get_taproot_account(keypair: any) {
+export function get_taproot_account(keypair: any, network: string) {
     const tp_signer = keypair;
     // Generate an address from the tweaked public key
     const tp_account = payments.p2tr({
         pubkey: toXOnly(tp_signer.publicKey),
-        network
+        network: choose_network(network)
     });
     return { tp_account, tp_signer }
 }
 
-export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): { p2tr: bitcoin.payments.Payment, redeem: any } {
-    const scriptTree: Taptree = [
-        {
-            output: asm
-        },
-        {
-            output: bitcoin.script.fromASM(keypair.publicKey.toString('hex') + ' OP_CHECKSIG')
-        }
-    ];
+export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer, network: string): { p2tr: bitcoin.payments.Payment, redeem: any } {
+    const scriptTree: Taptree =
+    {
+        output: asm
+    };
 
     const redeem = {
         output: asm,
@@ -64,7 +59,7 @@ export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): 
         internalPubkey: toXOnly(keypair.publicKey),
         scriptTree,
         redeem,
-        network,
+        network: choose_network(network),
     });
 
     return {
@@ -73,7 +68,7 @@ export function taproot_address_from_asm(asm: Buffer, keypair: bitcoin.Signer): 
     };
 }
 
-export function taproot_address_wallet(asm: Buffer, pk: string[], name: string, threshold: number): { p2tr: bitcoin.payments.Payment, redeem: any } {
+export function taproot_address_wallet(asm: Buffer, pk: string[], name: string, threshold: number, network: string): { p2tr: bitcoin.payments.Payment, redeem: any } {
     const scriptTree: Taptree =
     {
         output: asm
@@ -85,14 +80,14 @@ export function taproot_address_wallet(asm: Buffer, pk: string[], name: string, 
     };
 
     const pubkeys: Buffer[] = pk.map(str => Buffer.from(str, 'hex'));
-    const keypair = ECPair.makeRandom({ network })
+    const keypair = ECPair.makeRandom({ network: choose_network(network) })
 
     const p2tr = bitcoin.payments.p2tr({
         name,
         internalPubkey: toXOnly(keypair.publicKey),
         scriptTree,
         redeem,
-        network,
+        network: choose_network(network),
         pubkeys,
         m: threshold
     });

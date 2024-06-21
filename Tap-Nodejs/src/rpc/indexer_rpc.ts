@@ -47,10 +47,10 @@ export async function getBrc20EventsFromBlock(blockhash: string): Promise<ApiRes
     });
 }
 
-export async function getAllTickersInfo(): Promise<ApiResponse> {
+export async function getAllTickersInfo(): Promise<any> {
     const URL = `${API_URL}/api/v1/brc20/tick`;
 
-    return new Promise<ApiResponse>((resolve, reject) => {
+    return new Promise<any>((resolve, reject) => {
         axios.get(URL)
             .then(response => {
                 resolve(response.data);
@@ -61,10 +61,10 @@ export async function getAllTickersInfo(): Promise<ApiResponse> {
     });
 }
 
-export async function getTickerInfo(ticker: string): Promise<ApiResponse> {
+export async function getTickerInfo(ticker: string): Promise<any> {
     const URL = `${API_URL}/api/v1/brc20/tick/${ticker}`;
 
-    return new Promise<ApiResponse>((resolve, reject) => {
+    return new Promise<any>((resolve, reject) => {
         axios.get(URL)
             .then(response => {
                 resolve(response.data);

@@ -25,6 +25,7 @@ const ECPair: ECPairAPI = ECPairFactory(ecc);
 // *DO NOT USE script on mainnet/production without any concern DWYOR
 const network = networks.regtest;
 const RUNE_RECEIVE_VALUE = 600;
+const network_ = "regtest"
 
 function createRune() {
     const spacedRune = SpacedRune.fromString("Open-Rune");
@@ -48,7 +49,7 @@ function createRune() {
     return { buffer, commitBuffer: runestone.etching?.rune?.commitBuffer() };
 }
 
-function createMintPayment(keypair: Signer, commitBuffer: Buffer) {
+function createMintPayment(keypair: Signer, commitBuffer: Buffer, network: string) {
     // example witness + text inscription
     // *commit buffer is required
     const rune_script = [
@@ -71,7 +72,7 @@ function createMintPayment(keypair: Signer, commitBuffer: Buffer) {
         opcodes.OP_ENDIF,
     ];
 
-    let { p2tr, redeem } = taproot_address_from_asm(script.compile(rune_script), keypair)
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(rune_script), keypair, network)
 
     return {
         p2tr,
@@ -146,7 +147,7 @@ async function test_rune() {
 
     // Create payment address and fund the balance
     const rune = createRune();
-    const { p2tr, redeem } = createMintPayment(keypair, rune.commitBuffer!);
+    const { p2tr, redeem } = createMintPayment(keypair, rune.commitBuffer!, network_);
     const receiverAddress = "bcrt1p7xs0js658s3h7k80uweszex7esm4eyds62nhjrf8mpggtkrk9ztstqjx46";
 
     const temp_trans_1 = await pushTrans(p2tr.address ?? "")

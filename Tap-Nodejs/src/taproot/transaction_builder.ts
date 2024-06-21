@@ -20,7 +20,7 @@ import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { asm_builder, asm_csv, get_taproot_account, taproot_address_wallet, } from "../taproot/taproot_script_builder.js"
 import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "../bridge/multisig_builder.js"
 import * as fs from 'fs';
-import { toXOnly, tweakSigner, IUTXO, Config } from "../taproot/utils.js"
+import { toXOnly, tweakSigner, IUTXO, Config, choose_network, BRC20UTXO, prase_decimal } from "../taproot/utils.js"
 import { ins_builder } from "../inscribe/inscription_builder.js";
 import { brc_builder } from "../inscribe/brc20_builder.js";
 
@@ -30,7 +30,7 @@ export async function pay_ins(keypair: any, txid: any, addr_from: any, addr_to: 
     const utxos = await getUTXOfromTx(txid, addr_from)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: choose_network(network) });
 
     psbt.addInput({
         hash: utxos.txid,
@@ -70,7 +70,7 @@ export async function pay_tap(keypair: any, txid: any, addr_from: any, addr_to: 
     const utxos = await getUTXOfromTx(txid, addr_from)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: choose_network(network) });
     psbt.addInput({
         hash: utxos.txid,
         index: utxos.vout,
@@ -109,7 +109,7 @@ export async function pay_tap(keypair: any, txid: any, addr_from: any, addr_to: 
 }
 
 export function build_psbt(redeem: any, utxos: any[], addr_from: any, addr_to: any, network: any, account: any, value: any, fee: any): string {
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: choose_network(network) });
     let utxo_value = 0;
     let i = 0;
 
@@ -148,7 +148,7 @@ export function build_psbt(redeem: any, utxos: any[], addr_from: any, addr_to: a
 }
 
 export function sign_psbt(psbt_: string, WIF: string, network: any) {
-    const keypair = ECPair.fromWIF(WIF, network)
+    const keypair = ECPair.fromWIF(WIF, choose_network(network))
     // Auto-Sign
     let psbt = Psbt.fromBase64(psbt_)
 
@@ -171,6 +171,16 @@ export async function export_sign_psbt(psbt_: string) {
     return { length, pubkeys }
 }
 
+export function import_psbt(psbt_: string) {
+    let psbt = Psbt.fromBase64(psbt_)
+    return psbt;
+}
+
+export function export_psbt(psbt_: any) {
+    let psbt = psbt_.toBase64()
+    return psbt;
+}
+
 export async function pay_psbt(psbt_: string) {
     let psbt = Psbt.fromBase64(psbt_)
     psbt.finalizeAllInputs();
@@ -188,9 +198,28 @@ export async function pay_psbt(psbt_: string) {
     return tx.getId()
 }
 
+export function pay_psbt_hex(psbt_: string, threshold: number, sign_num: number, network: string, pks: any[]) {
+    let psbt = Psbt.fromBase64(psbt_)
+
+    for (let i = 0; i < psbt.data.inputs.length; i++) {
+        for (let j = threshold; j < sign_num; j++) {
+            psbt.data.inputs[i].tapScriptSig?.push({
+                leafHash: psbt.data.inputs[i].tapScriptSig![0].leafHash,
+                pubkey: pks[j],
+                signature: Buffer.from("")
+            });
+        }
+    }
+
+    psbt.finalizeAllInputs();
+    const tx = psbt.extractTransaction();
+    return tx.toHex()
+}
+
 export function auto_choose_UTXO(utxos: IUTXO[], max_amount: number): IUTXO[] {
-    // Filter out UTXOs with a value less than 1000 satoshis
-    let filteredUTXOs = utxos.filter(utxo => utxo.value >= 1000 && utxo.vout !== 0);
+    // Filter out UTXOs with a value less than 1000 satoshis (to avoid brc20)
+    // and the coinbase transaction (coinbase transaction will lock for 100 block)
+    let filteredUTXOs = utxos.filter(utxo => utxo.value >= 1000);
 
     // Sort UTXOs by value in descending order
     filteredUTXOs.sort((a, b) => b.value - a.value);
@@ -212,4 +241,58 @@ export function auto_choose_UTXO(utxos: IUTXO[], max_amount: number): IUTXO[] {
     }
 
     return chosenUTXOs;
+}
+
+
+export function auto_choose_brc20_UTXO(utxos: BRC20UTXO[], max_amount: number, decimal: number, ticker: string): BRC20UTXO[] {
+    // Filter out UTXOs with the coinbase transaction (coinbase transaction will lock for 100 block)
+    let filteredUTXOs = utxos.filter(utxo => utxo.brc20.tick == ticker);
+
+    // Sort UTXOs by value in descending order
+    filteredUTXOs.sort((a, b) => b.brc20.value - a.brc20.value);
+
+    let chosenUTXOs: BRC20UTXO[] = [];
+    let total = 0;
+
+    // Accumulate UTXOs until the total is at least max_amount
+    for (let utxo of filteredUTXOs) {
+        if (total >= max_amount) break;
+        chosenUTXOs.push(utxo);
+        total += prase_decimal(utxo.brc20.value, decimal);
+    }
+
+    // If the total is still less than max_amount after checking all UTXOs, there might be an issue
+    if (total < max_amount) {
+        console.warn('Not enough funds available to meet the max_amount requirement.');
+        return [];
+    }
+
+    return chosenUTXOs;
+}
+
+//----------------------Wallet API-------------------------------
+
+export async function pay_ins_hex(WIF: any, utxos: any, addr_to: any, network: any) {
+
+    const keypair = ECPair.fromWIF(WIF)
+    const { tp_account, tp_signer } = get_taproot_account(keypair, network)
+
+    const psbt = new Psbt({ network: choose_network(network) });
+
+    psbt.addInput({
+        hash: utxos.txid,
+        index: utxos.vout,
+        witnessUtxo: { value: utxos.value, script: tp_account.output! }
+    });
+
+    psbt.addOutput({
+        address: addr_to,
+        value: utxos.value - 500
+    });
+
+    psbt.signInput(0, tp_signer);
+    psbt.finalizeAllInputs();
+
+    const tx = psbt.extractTransaction();
+    return tx.toHex();
 }

@@ -5,12 +5,14 @@ import {
     payments,
 } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { ECPairFactory, ECPairAPI } from 'ecpair';
+import { ECPairFactory, ECPairAPI, networks } from 'ecpair';
 import varuint from "varuint-bitcoin";
 import * as tinysecp from 'tiny-secp256k1'
+import { regtest } from "bitcoinjs-lib/src/networks.js";
 
 initEccLib(tinysecp as any);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
+
 
 export function tweakSigner(signer: Signer, opts: any = {}): Signer {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -106,6 +108,39 @@ export function invert_json_p2tr(p2tr: string) {
     return { p2pktr, stringArray };
 }
 
+export function invert_json_to_obj(p2tr: string) {
+    const obj: any = JSON.parse(p2tr, (k, v) => {
+        if (
+            v !== null && typeof v === 'object' && 'type' in v && v.type === 'Buffer' && 'data' in v && Array.isArray(v.data)) {
+            return Buffer.from(v.data);
+        }
+        return v;
+    });
+    return obj;
+}
+
+export function prase_decimal(target: number, decimal: number) {
+    let temp = target
+    for (let i = 0; i < decimal; i++) {
+        temp = temp / 10
+    }
+    return temp
+}
+
+export function choose_network(net: string) {
+    switch (net) {
+        case "regtest": {
+            return regtest
+        }
+        case "livenet": {
+            return networks.bitcoin
+        }
+        case "testnet": {
+            return networks.testnet
+        }
+    }
+}
+
 export interface IUTXO {
     txid: string;
     vout: number;
@@ -118,6 +153,24 @@ export interface IUTXO {
     };
     value: number;
 }
+
+export interface BRC20UTXO {
+    txid: string;
+    vout: number;
+    address: string;
+    status: {
+        confirmed: boolean;
+        block_height: number;
+        block_hash: string;
+        block_time: number;
+    };
+    brc20: {
+        tick: string;
+        value: number;
+    };
+    value: number;
+}
+
 
 export interface Config {
     internalKey: string,

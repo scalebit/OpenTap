@@ -4,12 +4,11 @@ import { getUTXOfromTx, txBroadcastVeify } from "../rpc/bitcoin_rpc.js";
 import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { opcodes, Signer, script } from "bitcoinjs-lib";
 import * as bitcoin from 'bitcoinjs-lib';
-import { toXOnly } from "../taproot/utils.js";
+import { choose_network, toXOnly } from "../taproot/utils.js";
 
 const URL = `https://turbo.ordinalswallet.com`
-const network = { network: regtest };
 
-export function ins_builder(keypair: Signer, p: string, data: string, type: string) {
+export function ins_builder(keypair: Signer, p: string, data: string, type: string, network: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
         opcodes.OP_CHECKSIG,
@@ -24,7 +23,7 @@ export function ins_builder(keypair: Signer, p: string, data: string, type: stri
         opcodes.OP_ENDIF
     ];
 
-    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair, network)
     return { p2tr, redeem }
 }
 
@@ -76,7 +75,7 @@ export async function fetch_wallet_rpc(address: string) {
 }
 
 
-export async function ins_workflow(keypair: Signer, p: string, data: string, txid: string, type: string) {
+export async function ins_workflow(keypair: Signer, p: string, data: string, txid: string, type: string, network: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
         opcodes.OP_CHECKSIG,
@@ -89,13 +88,13 @@ export async function ins_workflow(keypair: Signer, p: string, data: string, txi
         Buffer.from(data),
         opcodes.OP_ENDIF
     ];
-    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair, network)
     let addr = p2tr.address ?? "";
 
     const utxos = await getUTXOfromTx(txid, addr)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
 
-    const psbt = new bitcoin.Psbt(network);
+    const psbt = new bitcoin.Psbt({ network: choose_network(network) });
 
     psbt.addInput({
         hash: utxos.txid,

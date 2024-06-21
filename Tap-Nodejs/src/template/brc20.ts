@@ -20,7 +20,7 @@ import { regtest } from "bitcoinjs-lib/src/networks.js";
 import { asm_builder, asm_csv, get_taproot_account, taproot_address_wallet, } from "../taproot/taproot_script_builder.js"
 import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "../bridge/multisig_builder.js"
 import * as fs from 'fs';
-import { toXOnly, tweakSigner, IUTXO, Config } from "../taproot/utils.js"
+import { toXOnly, tweakSigner, IUTXO, Config, choose_network } from "../taproot/utils.js"
 import { ins_builder } from "../inscribe/inscription_builder.js";
 import { brc_builder } from "../inscribe/brc20_builder.js";
 import { pay_ins, pay_tap } from "../taproot/transaction_builder.js";
@@ -28,12 +28,11 @@ import { pay_ins, pay_tap } from "../taproot/transaction_builder.js";
 // const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
-const network = networks.regtest;
 const LEAF_VERSION_TAPSCRIPT = 192;
 
 async function start() {
     // Stable Pair
-    const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", network)
+    const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", choose_network("regtest"))
 
     // const keypair = ECPair.makeRandom({ network });
 
@@ -44,21 +43,21 @@ async function start() {
 
     // await brc20_delopy(keypair, "test")
 
-    // await brc20_mint(keypair, 100, "test")
+    // await brc20_mint(keypair, 100, "test", "regtest")
 
-    await brc20_transfer(keypair, 100, "test", "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w")
+    await brc20_transfer(keypair, 100, "test", "bcrt1pkcvuxmpvencq8kd68g7k04tynjzwxeq7mg39xmclyxea3p9q335sywaxwu", "regtest")
 
     // console.log(script.toASM(Buffer.from("206b2f16c05b738835eadf8532373fc22336c5850c00e6f6290c9203542ac1a9b5ac0063036f72640101106170706c69636174696f6e2f6a736f6e004c6d7b0d0a202020202270223a20226272632d3230222c0d0a20202020226f70223a20226465706c6f79222c0d0a20202020227469636b223a202274657374222c0d0a20202020226d6178223a20223231303030303030222c0d0a20202020226c696d223a202231303030220d0a7d68", 'hex')))
     // console.log(script.toASM(Buffer.from("200a9a40288aa5b4f993423412acfc7397c75ec1e08d1fd33b7bf73e0f72ed9efeac0063036f726451106170706c69636174696f6e2f6a736f6e00487b2270223a226272632d3230222c226f70223a226465706c6f79222c227469636b223a2274657373222c226d6178223a223235303030303030222c226c696d223a2231303030227d68", 'hex')))
 }
 
-async function start_p2pktr(keypair: Signer) {
+async function start_p2pktr(keypair: Signer, network: string) {
     console.log(`Running "Pay to Pubkey with taproot example"`);
 
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
     // Generate an address from the tweaked public key
-    const { p2tr, redeem } = taproot_address_wallet(bitcoin.script.fromASM("bc6f7155178bed4aecd8ab1291959144de4dd0b5e0f848e2a8d6133b615fab35 OP_CHECKSIG"), [toXOnly(tweakedSigner.publicKey).toString('hex')], "test", 1)
+    const { p2tr, redeem } = taproot_address_wallet(bitcoin.script.fromASM("bc6f7155178bed4aecd8ab1291959144de4dd0b5e0f848e2a8d6133b615fab35 OP_CHECKSIG"), [toXOnly(tweakedSigner.publicKey).toString('hex')], "test", 1, network)
 
     const p2tr_addr = p2tr.address ?? "";
 
@@ -70,7 +69,7 @@ async function start_p2pktr(keypair: Signer) {
     const utxos = await getUTXOfromTx(temp_trans, p2tr_addr)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: choose_network(network) });
     psbt.addInput({
         hash: utxos.txid,
         index: utxos.vout,
@@ -111,14 +110,14 @@ async function start_p2pktr(keypair: Signer) {
 }
 
 // inscription 
-async function inscription_workflow(keypair: Signer, tick: string) {
+async function inscription_workflow(keypair: Signer, tick: string, network: string) {
 
     // Get account
-    const { tp_account, tp_signer } = get_taproot_account(keypair)
+    const { tp_account, tp_signer } = get_taproot_account(keypair, network)
 
     // Create temp account
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
 
     const json_test_1 = {
         "p": "brc-20",
@@ -128,7 +127,7 @@ async function inscription_workflow(keypair: Signer, tick: string) {
         "lim": "1000"
     }
 
-    const { p2tr, redeem } = brc_builder(tweakedSigner, JSON.stringify(json_test_1))
+    const { p2tr, redeem } = brc_builder(tweakedSigner, JSON.stringify(json_test_1), network)
 
     const addr_from = p2tr.address ?? "";
 
@@ -141,7 +140,7 @@ async function inscription_workflow(keypair: Signer, tick: string) {
     const utxos = await getUTXOfromTx(temp_trans, addr_from)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: choose_network(network) });
 
     psbt.addInput({
         hash: utxos.txid,
@@ -180,15 +179,15 @@ async function inscription_workflow(keypair: Signer, tick: string) {
 }
 
 // inscription 
-async function inscription(keypair: Signer) {
+async function inscription(keypair: Signer, network: string) {
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
 
     const json_test_1 = {
         "name": "hello world"
     }
 
-    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1), "text/plain;charset=utf-8")
+    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1), "text/plain;charset=utf-8", network)
 
     const addr_from = p2tr.address ?? "";
 
@@ -203,7 +202,7 @@ async function inscription(keypair: Signer) {
     const utxos = await getUTXOfromTx(temp_trans, addr_from)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
 
-    const psbt = new Psbt({ network });
+    const psbt = new Psbt({ network: choose_network(network) });
 
     psbt.addInput({
         hash: utxos.txid,
@@ -239,14 +238,14 @@ async function inscription(keypair: Signer) {
 }
 
 // inscription 
-async function brc20_delopy(keypair: Signer, tick: string) {
+async function brc20_delopy(keypair: Signer, tick: string, network: string) {
 
     // Get account
-    const { tp_account } = get_taproot_account(keypair)
+    const { tp_account } = get_taproot_account(keypair, network)
 
     // Create temp account
     // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
 
     const json_test_1 = {
         "p": "brc-20",
@@ -256,7 +255,7 @@ async function brc20_delopy(keypair: Signer, tick: string) {
         "lim": "1000"
     }
 
-    const { p2tr, redeem } = brc_builder(tweakedSigner, JSON.stringify(json_test_1))
+    const { p2tr, redeem } = brc_builder(tweakedSigner, JSON.stringify(json_test_1), network)
 
     const addr_from = p2tr.address ?? "";
 
@@ -272,13 +271,13 @@ async function brc20_delopy(keypair: Signer, tick: string) {
     await pushBlock(addr_from)
 }
 
-async function brc20_mint(keypair: Signer, amt: number, tick: string) {
+async function brc20_mint(keypair: Signer, amt: number, tick: string, network: string) {
     // Get account
-    const { tp_account } = get_taproot_account(keypair)
+    const { tp_account } = get_taproot_account(keypair, network)
 
     // Create temp account
     // Tweak the original keypair  
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
 
     const json_test_1 = {
         "p": "brc-20",
@@ -287,7 +286,7 @@ async function brc20_mint(keypair: Signer, amt: number, tick: string) {
         "amt": "" + amt + ""
     }
 
-    const { p2tr, redeem } = brc_builder(tweakedSigner, JSON.stringify(json_test_1))
+    const { p2tr, redeem } = brc_builder(tweakedSigner, JSON.stringify(json_test_1), network)
 
     const addr_from = p2tr.address ?? "";
 
@@ -303,14 +302,14 @@ async function brc20_mint(keypair: Signer, amt: number, tick: string) {
     await pushBlock(addr_from)
 }
 
-async function brc20_transfer(keypair: Signer, amt: number, tick: string, addr_to: string) {
+async function brc20_transfer(keypair: Signer, amt: number, tick: string, addr_to: string, network: string) {
     // Keypair is from_addr
 
     // Get account
-    const { tp_account, tp_signer } = get_taproot_account(keypair)
+    const { tp_account, tp_signer } = get_taproot_account(keypair, network)
 
     // Create temp account
-    const tweakedSigner = tweakSigner(keypair, { network });
+    const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
 
     const json_test_1 = {
         "p": "brc-20",
@@ -319,7 +318,7 @@ async function brc20_transfer(keypair: Signer, amt: number, tick: string, addr_t
         "amt": "" + amt + ""
     }
 
-    const { p2tr, redeem } = brc_builder(tweakedSigner, JSON.stringify(json_test_1))
+    const { p2tr, redeem } = brc_builder(tweakedSigner, JSON.stringify(json_test_1), network)
 
     const addr_from = p2tr.address ?? "";
 

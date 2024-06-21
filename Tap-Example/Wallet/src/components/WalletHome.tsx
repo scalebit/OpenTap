@@ -15,9 +15,7 @@ const WalletHome = (props: any) => {
     }
 
     useEffect(() => {
-        console.log("123")
         getBalanceByAddress_()
-
     }, [getBalanceByAddress_, address])
 
     return (

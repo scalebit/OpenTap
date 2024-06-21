@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from "react-router-dom"
-import { asm_builder, taproot_address_wallet } from 'opentap-v0.03/src/taproot/taproot_script_builder'
+import { asm_builder, taproot_address_wallet } from 'opentap-v0.14/src/taproot/taproot_script_builder'
 import { useStore } from '../store/index'
 import { IPublicKey, AnyObject, IWallet } from '../config/interface'
-import { invert_json_p2tr } from 'opentap-v0.03/src/taproot/utils'
+import { invert_json_p2tr } from 'opentap-v0.14/src/taproot/utils'
 import { useToast } from "@/components/ui/use-toast"
 
 
@@ -21,6 +21,8 @@ const CreateWallet = () => {
     const [isReg, setIsReg] = useState(false)
 
     const [step, setStep] = useState(1)
+
+    const [networkstate, Setnetworkstate] = useState(network)
 
     const [walletName, setWalletName] = useState('')
 
@@ -82,10 +84,9 @@ const CreateWallet = () => {
                 return
             }
 
-            // TODO: If Regtest, change network
-            // if (isReg){
-            //     network = "regtest"
-            // }
+            if (isReg) {
+                Setnetworkstate("regtest")
+            }
         }
 
         if (isImport) {
@@ -164,7 +165,7 @@ const CreateWallet = () => {
                     return
                 }
             } else if (step === 3) {
-                const flag = publicKeyArr.every(item => item.tag && item.publicKey && item.publicKey.length === 66)
+                const flag = publicKeyArr.every(item => item.tag && item.publicKey && item.publicKey.length === 64)
                 if (!flag || threshold < 1 || threshold > publicKeyArr.length) {
                     toast({
                         variant: "destructive",
@@ -190,8 +191,7 @@ const CreateWallet = () => {
             //创建对应的地址和解锁脚本
             const pks: string[] = publicKeyArr.map(item => item.publicKey)
             const script = asm_builder(pks, threshold)
-
-            const { p2tr } = taproot_address_wallet(script, pks, walletName, threshold)
+            const { p2tr } = taproot_address_wallet(script, pks, walletName, threshold, networkstate)
             setDescriptor(JSON.stringify(p2tr))
             p2tr_ = p2tr
         }
@@ -227,7 +227,7 @@ const CreateWallet = () => {
         const { p2pktr, stringArray } = invert_json_p2tr(descriptor)
         const import_threshold = p2pktr.m!
         setTempP2pktr(p2pktr)
-        const arr_ = stringArray.map((item: string) => {
+        const arr_ = stringArray!.map((item: string) => {
             return {
                 tag: '',
                 publicKey: item

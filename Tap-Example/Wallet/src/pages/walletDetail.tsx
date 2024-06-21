@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import WalletHome from '@/components/WalletHome'
 import WalletSend from '@/components/WalletSend'
+import WalletAssets from '@/components/WalletAssets'
 import { getBalanceByAddress } from '@/config/getData'
 
 const WalletDetail = () => {
@@ -16,14 +17,14 @@ const WalletDetail = () => {
         }
     }
 
-    const getBalance = async () => {
-        const resp = await getBalanceByAddress(location.address || '')
-        console.log(resp)
-    }
+    // const getBalance = async () => {
+    //     const resp = await getBalanceByAddress(location.address || '')
+    //     console.log(resp)
+    // }
 
-    useEffect(() => {
-        getBalance()
-    }, [])
+    // useEffect(() => {
+    //     getBalance()
+    // }, [])
 
 
     return (
@@ -35,7 +36,7 @@ const WalletDetail = () => {
                 <a role="tab" className={`tab ${tab === 3 ? 'tab-active' : ''}`} onClick={() => setTab(3)}>Asset</a>
             </div>
             {
-                tab === 1 ? <WalletHome currentWallet={currentWallet} /> : tab === 2 ? <WalletSend /> : <></>
+                tab === 1 ? <WalletHome currentWallet={currentWallet} /> : tab === 2 ? <WalletSend currentWallet={currentWallet} /> : tab === 3 ? <WalletAssets currentWallet={currentWallet} /> : <></>
             }
         </div>
     )

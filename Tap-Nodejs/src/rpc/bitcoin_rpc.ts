@@ -1,10 +1,11 @@
 import axios, { AxiosResponse } from "axios";
-import { IUTXO } from "../taproot/utils.js"
-import {Etching, Runestone} from "runelib";
+import { BRC20UTXO, IUTXO } from "../taproot/utils.js"
+import { Etching, Runestone } from "runelib";
 
 // baseURL: `https://blockstream.info/testnet/api`
 
 const URL = `http://user:pass@127.0.0.1:18443/`
+const ORD_URL = `http://localhost/api/v1/`
 
 export async function txBroadcastVeify(psbt: any, addr: string) {
     psbt.finalizeAllInputs();
@@ -219,6 +220,102 @@ export async function getAllUTXOfromAddress(address: string) {
     });
 }
 
+export async function getBRC20FromALLUTXO(utxo: IUTXO[]) {
+    return new Promise<BRC20UTXO[]>(async (resolve, reject) => {
+        try {
+            let ALL_UTXO: BRC20UTXO[] = []
+            for (var i = 0; i < utxo.length; i++) {
+                await axios.get(ORD_URL + `brc20/tx/${utxo[i].txid}/events`).then(
+                    firstResponse => {
+                        // Parse to Json
+                        let txjson = JSON.parse(JSON.stringify(firstResponse.data))
+                        for (let j = 0; j < txjson.data.events.length; j++) {
+                            if ((txjson.data.events[j].type == "transfer" || txjson.data.events[j].type == "mint") && txjson.data.events[j].to.address == utxo[i].address) {
+                                let tempbrc: BRC20UTXO = {
+                                    txid: txjson.data.txid,
+                                    vout: utxo[i].vout,
+                                    address: utxo[i].address,
+                                    status: {
+                                        confirmed: utxo[i].status.confirmed,
+                                        block_height: utxo[i].status.block_height,
+                                        block_hash: utxo[i].status.block_hash,
+                                        block_time: utxo[i].status.block_time,
+                                    },
+                                    brc20: {
+                                        tick: txjson.data.events[j].tick,
+                                        value: txjson.data.events[j].amount,
+                                    },
+                                    value: utxo[i].value,
+                                }
+                                ALL_UTXO.push(tempbrc)
+                            }
+                        }
+                    })
+            }
+            resolve(ALL_UTXO)
+        }
+        catch (error) {
+            reject(error);
+        }
+    });
+}
+
+export async function getBRC20FromUTXO(utxo: IUTXO) {
+    return new Promise<BRC20UTXO[]>((resolve, reject) => {
+        try {
+            let ALL_UTXO: BRC20UTXO[] = []
+
+            axios.get(ORD_URL + `brc20/tx/${utxo.txid}/events`).then(
+                firstResponse => {
+                    // Parse to Json
+                    let txjson = JSON.parse(JSON.stringify(firstResponse.data))
+                    console.log(txjson.data.events)
+                    for (let j = 0; j < txjson.data.events.length; j++) {
+                        if (txjson.data.events[j].type == "transfer" && txjson.data.events[j].to.address == utxo.address) {
+                            let tempbrc: BRC20UTXO = {
+                                txid: txjson.data.txid,
+                                vout: utxo.vout,
+                                address: utxo.address,
+                                status: {
+                                    confirmed: utxo.status.confirmed,
+                                    block_height: utxo.status.block_height,
+                                    block_hash: utxo.status.block_hash,
+                                    block_time: utxo.status.block_time,
+                                },
+                                brc20: {
+                                    tick: txjson.data.events[j].tick,
+                                    value: txjson.data.events[j].amount,
+                                },
+                                value: utxo.value,
+                            }
+                            ALL_UTXO.push(tempbrc)
+                        }
+                    }
+                })
+            resolve(ALL_UTXO)
+        }
+        catch (error) {
+            reject(error);
+        }
+    });
+}
+
+export async function getTick(ticker: string) {
+    return new Promise<any>((resolve, reject) => {
+        try {
+            axios.get(ORD_URL + `/api/v1/brc20/tick/${ticker}`).then(
+                firstResponse => {
+                    // Parse to Json
+                    let txjson = JSON.parse(JSON.stringify(firstResponse.data))
+                    resolve(txjson.data)
+                })
+        }
+        catch (error) {
+            reject(error);
+        }
+    });
+}
+
 export async function broadcast(txHex: string) {
     return new Promise<string>((resolve, reject) => {
         const data = {
@@ -243,7 +340,6 @@ export async function broadcast(txHex: string) {
             reject(error);
         }
     });
-
 }
 
 export async function broadcastraw(txHex: string) {
@@ -288,10 +384,10 @@ export async function getRunefromTx(txid: string) {
                     let txjson = JSON.parse(JSON.stringify(firstResponse.data))
                     console.log(txjson.result.hex)
                     const rune_stone = Runestone.decipher(txjson.result.hex).value() as Runestone;
-                    if (rune_stone != null){
+                    if (rune_stone != null) {
                         resolve(rune_stone)
-                        
-                    }else{
+
+                    } else {
                         console.log("No Rune in this tx")
                     }
 

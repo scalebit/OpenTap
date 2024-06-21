@@ -18,15 +18,25 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': {
+      '/rpcapi': {
         target: 'http://127.0.0.1:3002',
         changeOrigin: true,
-        // rewrite: (path) => path.replace(/^\/api/, '')
+        rewrite: (path) => path.replace(/^\/rpcapi/, 'api')
       },
       '/unisatapi': {
         target: 'https://open-api.unisat.io/v1',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/unisatapi/, '')
+      },
+      '/opentap-regtest': {
+        target: 'http://user:pass@127.0.0.1:18443',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/opentap-regtest/, '')
+      },
+      '/ord-regtest': {
+        target: 'http://127.0.0.1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ord-regtest/, '')
       }
     }
   },

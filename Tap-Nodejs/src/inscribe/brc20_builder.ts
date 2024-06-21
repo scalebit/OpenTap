@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from "axios";
-import { toXOnly } from "../taproot/utils.js";
+import { choose_network, toXOnly } from "../taproot/utils.js";
 import { Signer, opcodes, script } from "bitcoinjs-lib";
 import { taproot_address_from_asm } from "../taproot/taproot_script_builder.js";
 import { getUTXOfromTx, txBroadcastVeify } from "../rpc/bitcoin_rpc.js";
@@ -8,10 +8,8 @@ import { regtest } from "bitcoinjs-lib/src/networks.js";
 
 const URL = `https://open-api.unisat.io/v2/`
 const API_KEY = `Use your own unisat API_KEY`
-const network = { network: regtest };
 
-
-export function brc_builder(keypair: Signer, data: string) {
+export function brc_builder(keypair: Signer, data: string, network: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
         opcodes.OP_CHECKSIG,
@@ -26,7 +24,7 @@ export function brc_builder(keypair: Signer, data: string) {
         opcodes.OP_ENDIF
     ];
 
-    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair, network)
     return { p2tr, redeem }
 }
 
@@ -42,7 +40,7 @@ export function brc20_op(op: string, tick: string, amt: string, lim: string) {
 }
 
 
-export async function brc20_send(keypair: Signer, p: string, data: string, txid: string) {
+export async function brc20_send(keypair: Signer, p: string, data: string, txid: string, network: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
         opcodes.OP_CHECKSIG,
@@ -56,13 +54,13 @@ export async function brc20_send(keypair: Signer, p: string, data: string, txid:
         Buffer.from(data),
         opcodes.OP_ENDIF
     ];
-    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair)
+    let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair, network)
     let addr = p2tr.address ?? "";
 
     const utxos = await getUTXOfromTx(txid, addr)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
 
-    const psbt = new bitcoin.Psbt(network);
+    const psbt = new bitcoin.Psbt({ network: choose_network(network) });
 
     psbt.addInput({
         hash: utxos.txid,

@@ -104,8 +104,6 @@ export async function pay_sig(network: any, utxos: any, p2pktr: any, keys: Signe
         witnessUtxo: { value: utxos.value, script: p2pktr.output! },
     });
 
-    console.log(p2pktr)
-    console.log(p2pktr.witness)
     psbt.updateInput(0, {
         tapLeafScript: [
             {
@@ -125,8 +123,8 @@ export async function pay_sig(network: any, utxos: any, p2pktr: any, keys: Signe
     for (var i = 0; i < keys.length; i++) {
         psbt.signInput(0, keys[i]);
     }
-    // Uselss signers
-    if (keys.length < threshold) {
+    // Useless signers
+    if (keys.length > threshold) {
         for (var i = keys.length; i < threshold; i++) {
             psbt.signInput(0, leafKeys_useless[i]);
         }
