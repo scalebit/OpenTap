@@ -468,18 +468,12 @@ async function bridge_workflow(keypair: Signer) {
     // All input have to be signed
     // So generated some random private key to sign
     const leafKeys = [];
-    const leafKeys_useless = [];
     const leafPubkeys = [];
-    const leafPubkeys_useless = [];
 
     for (let i = 0; i < KeyNum; i++) {
         const leafKey = ECPair.makeRandom({ network });
         leafKeys.push(leafKey);
         leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
-
-        const leafKey_useless = ECPair.makeRandom({ network });
-        leafKeys_useless.push(leafKey_useless);
-        leafPubkeys_useless.push(toXOnly(leafKey_useless.publicKey).toString('hex'));
     }
 
     const leafScript = asm_builder(leafPubkeys, Threshold);
@@ -559,12 +553,20 @@ async function bridge_workflow(keypair: Signer) {
         psbt.addOutput({ value: utxos.value - 150, address: p2pktr.address! });
 
         // Threshold signers
-        for (var i = 0; i < Threshold; i++) {
+        for (var i = 0; i < leafKeys.length; i++) {
             psbt.signInput(0, leafKeys[i]);
         }
         // Uselss signers
-        for (var i = Threshold; i < leafKeys.length; i++) {
-            psbt.signInput(0, leafKeys_useless[i]);
+        if (leafKeys.length < Threshold) {
+            for (let i = 0; i < psbt.data.inputs.length; i++) {
+                for (let j = leafKeys.length; j < Threshold; j++) {
+                    psbt.data.inputs[i].tapScriptSig?.push({
+                        leafHash: psbt.data.inputs[i].tapScriptSig![0].leafHash,
+                        pubkey: toXOnly(leafKeys[j].publicKey),
+                        signature: Buffer.from("")
+                    });
+                }
+            }
         }
     }
     ///////////////////////////
@@ -632,7 +634,7 @@ async function bridge_unit(keypair: Signer) {
     for (let i = 0; i < KeyNum; i++) {
         const leafKey: Signer = ECPair.makeRandom({ network });
         leafKeys.push(leafKey);
-        leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
+        leafPubkeys.push(toXOnly(leafKey.publicKey));
     }
 
     const [p2pktr, p2csvtr, utxos] = await get_taproot_bridge(keypair, leafKeys, KeyNum, Threshold, Locktime, network);
@@ -641,7 +643,7 @@ async function bridge_unit(keypair: Signer) {
     //Path 1: update multi-sig unlock
     /////////////////////////////////
     if (Tappath == 1) {
-        await pay_sig(network, utxos, p2pktr, leafKeys, Threshold)
+        await pay_sig(network, utxos, p2pktr, leafKeys, Threshold, leafPubkeys)
     }
 
     //////////////////////////
@@ -765,8 +767,10 @@ async function bridge_unlock_with_dump(path: number) {
     });
 
     let leafKeys: ECPairInterface[] = []
+    let leafPubkeys = []
     for (var i = 0; i < leafWIFKeys.length; i++) {
         leafKeys.push(ECPair.fromWIF(leafWIFKeys[i].toString(), network))
+        leafPubkeys.push(toXOnly(ECPair.fromWIF(leafWIFKeys[i].toString(), network).publicKey))
     }
     let key = ECPair.fromWIF(config.internalKey.toString(), network)
 
@@ -774,7 +778,7 @@ async function bridge_unlock_with_dump(path: number) {
     //Path 1: update multi-sig unlock
     /////////////////////////////////
     if (path == 1) {
-        await pay_sig(network, utxos, p2pktr, leafKeys, config.Threshold)
+        await pay_sig(network, utxos, p2pktr, leafKeys, config.Threshold, leafPubkeys)
     }
 
     // //////////////////////////

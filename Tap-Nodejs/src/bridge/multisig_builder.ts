@@ -90,12 +90,7 @@ export async function get_taproot_bridge(keypair: Signer, keys: any[], keynum: n
     return [p2pktr, p2csvtr, utxos];
 }
 
-export async function pay_sig(network: any, utxos: any, p2pktr: any, keys: Signer[], threshold: number) {
-
-    const leafKeys_useless = [];
-    for (let i = 0; i < threshold; i++) {
-        leafKeys_useless.push(ECPair.makeRandom({ network }));
-    }
+export async function pay_sig(network: any, utxos: any, p2pktr: any, keys: Signer[], threshold: number, pubkeys: Buffer[]) {
 
     const psbt = new bitcoin.Psbt({ network });
     psbt.addInput({
@@ -123,11 +118,18 @@ export async function pay_sig(network: any, utxos: any, p2pktr: any, keys: Signe
     for (var i = 0; i < keys.length; i++) {
         psbt.signInput(0, keys[i]);
     }
-    // Useless signers
-    if (keys.length > threshold) {
-        for (var i = keys.length; i < threshold; i++) {
-            psbt.signInput(0, leafKeys_useless[i]);
+    // Uselss signers
+    if (keys.length < threshold) {
+        for (let i = 0; i < psbt.data.inputs.length; i++) {
+            for (let j = keys.length; j < threshold; j++) {
+                psbt.data.inputs[i].tapScriptSig?.push({
+                    leafHash: psbt.data.inputs[i].tapScriptSig![0].leafHash,
+                    pubkey: toXOnly(pubkeys[j]),
+                    signature: Buffer.from("")
+                });
+            }
         }
+
     }
 
     psbt.finalizeAllInputs();
@@ -259,10 +261,6 @@ export async function get_taproot_bridge_multi_leaf(keypair: Signer, keys: any[]
 }
 
 export async function pay_sig_multi_leaf(network: any, utxos: any, p2pktr: any[], keys: Signer[], threshold: number, locker: number) {
-    const leafKeys_useless = [];
-    for (let i = 0; i < threshold; i++) {
-        leafKeys_useless.push(ECPair.makeRandom({ network }));
-    }
 
     const psbt = new bitcoin.Psbt({ network });
     psbt.addInput({
@@ -291,12 +289,6 @@ export async function pay_sig_multi_leaf(network: any, utxos: any, p2pktr: any[]
     // Threshold signers
     for (var i = 0; i < keys.length; i++) {
         psbt.signInput(0, keys[i]);
-    }
-    // Uselss signers
-    if (keys.length < threshold) {
-        for (var i = keys.length; i < threshold; i++) {
-            psbt.signInput(0, leafKeys_useless[i]);
-        }
     }
 
     psbt.finalizeAllInputs();

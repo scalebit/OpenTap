@@ -4,11 +4,11 @@ This is the `node.js` version of OpenTap. Currently it cannot be directly instal
 
 - Taproot: the basic function to build taproot transaction/address, and the RPC commend to interact with the Bitcoin network.
 - MultiSig: the function that related to build multi-sig tapscript, including the single-tapleaf, multi-tapleaf and musig solution, together with a `CHECKSEQUENCEVERIFY` style escape hatch.
-- Inscription: the function related to build/fetch/send/mint inscription, building in progress.
+- Inscription: the function related to build/fetch/send/mint inscription.
 
-## **index.js**
+## **How to use**
 
-currently we have organized all the function in the `index.ts` for you to simply checkout how OpenTap works. We have build a integrated demo to shown how to build multi-sig taproot address and the unlocking mechanism.
+currently we have organized all the test case in the `template` for you to checkout how OpenTap works. We have build a integrated demo to shown how to build multi-sig taproot address and the unlocking mechanism.
 
 ```tsx
     // Classic Multisig
