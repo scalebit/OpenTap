@@ -1,4 +1,4 @@
-// Made by joundy
+// Ref joundy
 // https://github.com/joundy/bitcoin-rune-creator-js
 
 import { Runestone, SpacedRune, Symbol } from "runestone-js";

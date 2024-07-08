@@ -115,7 +115,6 @@ export async function etching(){
     const txHex = await broadcast(tx.toHex());
     console.log(`Success! TxHex is ${txHex}`);
 
-
     // const stone_test = Runestone.decipher(tx.toHex()).value() as Runestone;
     // const etching_test = stone_test.etching.value() as Etching;
     // console.log(`Stone Name:${etching_test.rune.value()?.name}`)
@@ -125,7 +124,6 @@ export async function etching(){
     const stone_test = await getRunefromTx(txHex)
     const etching_test = stone_test.etching.value() as Etching;
     console.log(`Stone Name:${etching_test.rune.value()?.name}`)
-
 }
 
 // etching()

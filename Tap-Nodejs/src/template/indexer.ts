@@ -44,7 +44,7 @@ async function start() {
                 const response = await getBRC20Balances(address);
                 if (response.code !== 0) {
                     console.log('error:', response.msg);
-                }else{
+                } else {
                     console.log('BRC20 Balances:', response.data);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -52,7 +52,7 @@ async function start() {
                 const response2 = await getBrc20Transferable(address);
                 if (response2.code !== 0) {
                     console.log('error:', response2.msg);
-                }else{
+                } else {
                     console.log('Transferable:', response2.data.inscriptions);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -60,7 +60,7 @@ async function start() {
                 const response3 = await getBrc20EventsFromBlock(block_hash);
                 if (response3.code !== 0) {
                     console.log('error:', response3.msg);
-                }else{
+                } else {
                     console.log('Events:', response3.data.block);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -68,7 +68,7 @@ async function start() {
                 const response4 = await getAllTickersInfo();
                 if (response4.code !== 0) {
                     console.log('error:', response4.msg);
-                }else{
+                } else {
                     console.log('Tokens:', response4.data.tokens);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -76,23 +76,23 @@ async function start() {
                 const response5 = await getTickerInfo(ticker);
                 if (response5.code !== 0) {
                     console.log('error:', response5.msg);
-                }else{
+                } else {
                     console.log('Token:', response5.data);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
             case 6:
-                const response6 = await getTickerBalance(ticker,address);
+                const response6 = await getTickerBalance(ticker, address);
                 if (response6.code !== 0) {
                     console.log('error:', response6.msg);
-                }else{
+                } else {
                     console.log('TickerBalance:', response6.data);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
             case 7:
-                const response7 = await getTransferableBrc20(ticker,address);
+                const response7 = await getTransferableBrc20(ticker, address);
                 if (response7.code !== 0) {
                     console.log('error:', response7.msg);
-                }else{
+                } else {
                     console.log('TransferableBrc20:', response7.data.inscriptions);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -100,7 +100,7 @@ async function start() {
                 const response8 = await getBrc20EventsFromTx(txid);
                 if (response8.code !== 0) {
                     console.log('error:', response8.msg);
-                }else{
+                } else {
                     console.log('Events:', response8.data.events);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -108,7 +108,7 @@ async function start() {
                 const response9 = await getIndexerStatus();
                 if (response9.code !== 0) {
                     console.log('error:', response9.msg);
-                }else{
+                } else {
                     console.log('Status:', response9.data);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -116,7 +116,7 @@ async function start() {
                 const response10 = await getInscriptionsFromBlock(block_hash);
                 if (response10.code !== 0) {
                     console.log('error:', response10.msg);
-                }else{
+                } else {
                     console.log('Block:', response10.data.block);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -124,7 +124,7 @@ async function start() {
                 const response11 = await getInscriptionById(inscriptionId);
                 if (response11.code !== 0) {
                     console.log('error:', response11.msg);
-                }else{
+                } else {
                     console.log('Inscription:', response11.data);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -132,7 +132,7 @@ async function start() {
                 const response12 = await getInscriptionByNumber(inscriptionNumber);
                 if (response12.code !== 0) {
                     console.log('error:', response12.msg);
-                }else{
+                } else {
                     console.log('Inscription:', response12.data);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -140,7 +140,7 @@ async function start() {
                 const response13 = await getInscriptionFromOutpoint(outpoint);
                 if (response13.code !== 0) {
                     console.log('error:', response13.msg);
-                }else{
+                } else {
                     console.log('OutPoint:', response13.data);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
@@ -148,11 +148,11 @@ async function start() {
                 const response14 = await getInscriptionsFromTx(txid);
                 if (response14.code !== 0) {
                     console.log('error:', response14.msg);
-                }else{
+                } else {
                     console.log('Tx:', response14.data);
                 }
                 console.log('--------------------------------------------------------------------------------------------');
-        }    
+        }
     } catch (error) {
         console.error('Error:', error);
     }

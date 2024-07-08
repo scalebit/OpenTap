@@ -33,10 +33,8 @@ const LEAF_VERSION_TAPSCRIPT = 192;
 async function start() {
     // Stable Pair
     const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", choose_network("regtest"))
-
     // const keypair = ECPair.makeRandom({ network });
 
-    // Basic Test
     // await start_p2pktr(keypair)
 
     // await inscription(keypair)
@@ -46,9 +44,6 @@ async function start() {
     // await brc20_mint(keypair, 100, "test", "regtest")
 
     await brc20_transfer(keypair, 100, "test", "bcrt1pkcvuxmpvencq8kd68g7k04tynjzwxeq7mg39xmclyxea3p9q335sywaxwu", "regtest")
-
-    // console.log(script.toASM(Buffer.from("206b2f16c05b738835eadf8532373fc22336c5850c00e6f6290c9203542ac1a9b5ac0063036f72640101106170706c69636174696f6e2f6a736f6e004c6d7b0d0a202020202270223a20226272632d3230222c0d0a20202020226f70223a20226465706c6f79222c0d0a20202020227469636b223a202274657374222c0d0a20202020226d6178223a20223231303030303030222c0d0a20202020226c696d223a202231303030220d0a7d68", 'hex')))
-    // console.log(script.toASM(Buffer.from("200a9a40288aa5b4f993423412acfc7397c75ec1e08d1fd33b7bf73e0f72ed9efeac0063036f726451106170706c69636174696f6e2f6a736f6e00487b2270223a226272632d3230222c226f70223a226465706c6f79222c227469636b223a2274657373222c226d6178223a223235303030303030222c226c696d223a2231303030227d68", 'hex')))
 }
 
 async function start_p2pktr(keypair: Signer, network: string) {

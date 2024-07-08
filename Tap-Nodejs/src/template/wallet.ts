@@ -144,108 +144,8 @@ async function start_psbt(threshold: number, num: number, keypair: Signer, amt: 
     const txhex = await pay_psbt_hex(psbt_origin, threshold, num, "regtest", leafKeys)
 
     await broadcast(txhex)
-    // await pushBlock("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w")
+
 }
-
-// async function start_psbt(threshold: number, num: number, keypair: Signer, amt: number, fee: number) {
-
-// const leafKeys = [];
-// const leafKeys_useless = [];
-// const leafPubkeys = [];
-// const leafPubkeys_useless = [];
-// // const leafKeys_WIF = [];
-
-// for (let i = 0; i < num; i++) {
-//     // const leafKey = ECPair.makeRandom({ network });
-//     // leafKeys.push(leafKey);
-//     // leafPubkeys.push(toXOnly(leafKey.publicKey).toString('hex'));
-//     // leafKeys_WIF.push(leafKey.toWIF())
-
-//     const leafKey_useless = ECPair.makeRandom({ network });
-//     leafKeys_useless.push(leafKey_useless);
-//     leafPubkeys_useless.push(toXOnly(leafKey_useless.publicKey).toString('hex'));
-// }
-
-// const { leafKeys_WIF, p2tr, redeem } = taproot_multisig_raw_account(keypair, threshold, num, "regtest")
-
-// // const leafScript = asm_builder(leafPubkeys, threshold);
-
-// // const scriptTree: Taptree =
-// // {
-// //     output: leafScript,
-// // };
-
-// // const redeem = {
-// //     output: leafScript,
-// //     redeemVersion: LEAF_VERSION_TAPSCRIPT,
-// // };
-
-// // const p2tr = bitcoin.payments.p2tr({
-// //     internalPubkey: toXOnly(keypair.publicKey),
-// //     scriptTree,
-// //     redeem,
-// //     network: choose_network(`regtest`),
-// // });
-
-
-//     console.log(`Waiting till UTXO is detected at this Address: ${p2tr.address!}`)
-
-//     let temp_trans = await pushTrans(p2tr.address!)
-//     console.log("the new txid is:", temp_trans)
-
-//     const utxos = await getUTXOfromTx(temp_trans, p2tr.address!)
-
-//     // let psbt_origin: string = build_psbt(redeem, [utxo], p2tr.address, "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", "regtest", p2tr, amt, fee)
-//     // let psbt_ = ''
-
-//     // for (var i = 0; i < threshold; i++) {
-//     //     psbt_ = sign_psbt(psbt_origin, leafKeys_WIF[i], "regtest")
-//     //     psbt_origin = psbt_
-//     // }
-
-//     const psbt = new bitcoin.Psbt({ network: choose_network(`regtest`) });
-
-//     psbt.addInput({
-//         hash: utxos.txid,
-//         index: utxos.vout,
-//         witnessUtxo: { value: utxos.value, script: p2tr.output! },
-//     });
-
-//     psbt.updateInput(0, {
-//         tapLeafScript: [
-//             {
-//                 leafVersion: redeem.redeemVersion,
-//                 script: redeem.output,
-//                 controlBlock: p2tr.witness![p2tr.witness!.length - 1],
-//             },
-//         ],
-//     });
-
-//     psbt.addOutput({ value: utxos.value - 150, address: p2tr.address! });
-
-//     // psbt.addOutput({ value: utxos.value - 150, address: p2tr.address! });
-
-//     // Threshold signers
-//     for (var i = 0; i < threshold; i++) {
-//         psbt.signInput(0, ECPair.fromWIF(leafKeys_WIF[i], choose_network(`regtest`)));
-//     }
-
-//     // All input have to be signed
-//     // So generated some random private key to sign
-
-//     // Useless signers
-//     for (var i = threshold; i < leafKeys_WIF.length; i++) {
-//         psbt.signInput(0, leafKeys_useless[i]);
-//     }
-
-//     psbt.finalizeAllInputs();
-
-//     const tx = psbt.extractTransaction();
-//     console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
-//     console.log("Txid is:", tx.getId());
-
-//     await broadcast(tx.toHex())
-// }
 
 async function start_psbt_stable(leafKeys_WIF: any, p2tr: any, redeem: any, keypair: Signer, amt: number, fee: number) {
 
@@ -333,8 +233,6 @@ async function start_p2pktr_pubkeys() {
     const Key1 = ECPair.makeRandom({ network });
     const Key2 = ECPair.makeRandom({ network });
 
-    // Tweak the original keypair
-    // const tweakedSigner = tweakSigner(keypair, { network });
     // Generate an address from the tweaked public key
     const p2pktr = payments.p2tr({
         pubkeys: [toXOnly(Key1.publicKey), toXOnly(Key2.publicKey)],

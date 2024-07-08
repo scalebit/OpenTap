@@ -1,7 +1,6 @@
-import {Runestone,EtchInscription,Rune,Terms,none,Etching,some,Range,RuneId,Edict} from "runelib";
+import { Runestone, none, RuneId, Edict } from "runelib";
 import {
     initEccLib,
-    script,
     payments,
     networks,
     Psbt,
@@ -9,8 +8,7 @@ import {
 import * as ecc from "tiny-secp256k1";
 import ECPairFactory, { ECPairAPI } from "ecpair";
 import { toXOnly } from "../taproot/utils.js"
-import { Taptree } from "bitcoinjs-lib/src/types";
-import { pushTrans, getUTXOfromTx,pushBlock,broadcast,getRunefromTx } from "../rpc/bitcoin_rpc.js";
+import { pushTrans, getUTXOfromTx, pushBlock, broadcast, getRunefromTx } from "../rpc/bitcoin_rpc.js";
 
 
 const network = networks.regtest;
@@ -82,7 +80,7 @@ export async function transferring() {
         const edict = edicts_test[index];
         console.log(`edict:${edict.id.block} ${edict.id.idx} ${edict.amount} ${edict.output}`)
     }
-    
+
 }
 
 // transferring()

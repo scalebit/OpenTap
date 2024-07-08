@@ -2,44 +2,32 @@
 
 This is the `node.js` version of OpenTap. Currently it cannot be directly install using the `npm` or `yarn` before we confirm. Nonetheless, you can find anything that useful for your project to claim. The structure of the project is shown below:
 
-- Taproot: the basic function to build taproot transaction/address, and the RPC commend to interact with the Bitcoin network.
-- MultiSig: the function that related to build multi-sig tapscript, including the single-tapleaf, multi-tapleaf and musig solution, together with a `CHECKSEQUENCEVERIFY` style escape hatch.
-- Inscription: the function related to build/fetch/send/mint inscription.
+## bridge
 
-## **How to use**
+Here contained functions that related to Layer 1 bridge taproot script, including three different types of taproot multi-sig account and payment method. The detail of different type of taproot account can be find here:
 
-currently we have organized all the test case in the `template` for you to checkout how OpenTap works. We have build a integrated demo to shown how to build multi-sig taproot address and the unlocking mechanism.
+[taproot-multisig](https://jimmysong.github.io/taproot-multisig)
 
-```tsx
-    // Classic Multisig
-    // await bridge_unit(keypair)
+In addition, we implement a simple CSV script as the escape hatch in the taproot account.
 
-    // Privacy Multisig
-    // await bridge_unit_mulit_leaf(keypair, 1)
+## inscribe
 
-    // Workflow
-    // await bridge_workflow(keypair)
+These functions are mainly for the inscription-related operation. It contained how to build/inscribe a inscription and brc20. Meanwhile, you can find the parser of inscription and build your own indexer if needed. 
 
-    // Musig
-    // await start_musig_txbuilder()
+We are not using RPC/API to build inscription, instead, we build everything from the ground to make a better understanding. However, to test if the inscription is successfully made, you should install a local indexer, which can be found in the environment folder.
 
-    // Create a Taproot Bridge
-    // await bridge_ceate_and_dump()
+## rpc
 
-    // Multisig pay
-    // await bridge_unlock_with_dump(1)
+It contains functions that using axios to post/get data from Bitcoin RPC and other indexer service.
 
-    // Escape hatch
-    // await bridge_unlock_with_dump(2)
-```
+## rune
 
-- bridge_unit: test the integrated multi-sig tapscript with single-leaf solution.
-- bridge_unit_mulit_leaf: test the integrated multi-sig tapscript with multi-leaf solution
-- bridge_workflow: test the complete workflow of how to build a tapscript and reedem the taproot address, especially made for understand the detail of taproot implementation.
-- start_musig_txbuilder: test the integrated multi-sig tapscript with musig solution.
-- bridge_create_and_dump:  create and dump the taproot setting into `.json`.
-- bridge_unlock_with_dump: unlock the dumped `.json` taproot address.
+It contains the necessary function about how to etching and minting runestone. However, different from Brc20 that have a indexer to testify the result, there is no available local runestone indxer. In this case, you can use rpc/bitcoin_rpc/getRunefromTx function to see if a runestone is successfully made.
 
-## **test**
+## taproot
 
-We are currently working on mocha test.
+It contains the functions that used to build taproot account, redeem script and psbt. It basically formed by low-level code, only pay attention if you find any problem with high-level function.
+
+## template
+
+We have organized all the test case in this folder for you to checkout how OpenTap works. We strongly recommend you to go through this functions, as it demonstrate how to use the Opentap.
