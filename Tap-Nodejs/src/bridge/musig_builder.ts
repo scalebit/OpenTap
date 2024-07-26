@@ -123,6 +123,12 @@ export async function test2() {
     }
 }
 
+/**
+ * make random agg keypair in musig schema
+ *
+ * @param {number} num - The number of keypair
+ * @returns {any[]} - return an key array
+ */
 export function get_agg_keypair(num: number) {
     // Let's create an example list of signers.
     const signers: any[] = []
@@ -151,6 +157,13 @@ export function get_agg_keypair(num: number) {
     return wallets;
 }
 
+/**
+ * Aggregate the keypair into a single schnorr key
+ *
+ * @param {any[]} wallets - The keypair used for agg
+ * @param {any} options - The options used for agg, please use get_option() function
+ * @returns {any} - return an agg key
+ */
 export function get_agg_pub(wallets: any[], options: any) {
     // Encode an example string as bytes.
     const encoder = new TextEncoder()
@@ -165,6 +178,12 @@ export function get_agg_pub(wallets: any[], options: any) {
     return group_pubkey
 }
 
+/**
+ * Randomize the option/tweak of Aggregation process
+ *
+ * @param {any[]} wallets - The keypair used for agg
+ * @returns {any} - return an option object
+ */
 export function get_option(wallets: any[]) {
     // use option 32
     // use random, please use Buff.random(32)
@@ -172,6 +191,15 @@ export function get_option(wallets: any[]) {
     return options
 }
 
+
+/**
+ * Sign for an agg pubkey
+ *
+ * @param {any[]} wallets - The keypair used for agg
+ * @param {any} options - The options used for agg, please use get_option() function
+ * @param {any} message - The message you want to sign
+ * @returns {any} - return an option object
+ */
 export function get_agg_sign(wallets: any[], options: any, message: any) {
 
     const group_keys = wallets.map(e => e.pub_key)

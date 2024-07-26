@@ -1,31 +1,25 @@
 
-import {
-    initEccLib,
-    networks,
-    script,
-    Signer,
-    payments,
-    crypto,
-    Psbt,
-    Transaction,
-} from "bitcoinjs-lib";
-import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "../rpc/bitcoin_rpc.js";
-import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
-import { get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "../bridge/musig_builder.js"
+import { Psbt } from "bitcoinjs-lib";
+import { broadcast, getUTXOfromTx, getALLUTXOfromTx } from "../rpc/bitcoin_rpc.js";
+import { ECPairFactory, ECPairAPI } from 'ecpair';
 import * as tinysecp from 'tiny-secp256k1'
-import { Buff } from '@cmdcode/buff'
-import { schnorr } from '@noble/curves/secp256k1'
-import { regtest } from "bitcoinjs-lib/src/networks.js";
-import { asm_builder, asm_csv, get_taproot_account, taproot_address_wallet, } from "../taproot/taproot_script_builder.js"
-import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "../bridge/multisig_builder.js"
-import * as fs from 'fs';
-import { toXOnly, tweakSigner, IUTXO, Config, choose_network, BRC20UTXO, prase_decimal } from "../taproot/utils.js"
-import { ins_builder } from "../inscribe/inscription_builder.js";
-import { brc_builder } from "../inscribe/brc20_builder.js";
+import { get_taproot_account } from "../taproot/taproot_script_builder.js"
+import { toXOnly, IUTXO, choose_network, BRC20UTXO, prase_decimal } from "../taproot/utils.js"
 
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 
+/**
+ * pay for a inscription
+ *
+ * @param {Signer} keypair - The number of keypair
+ * @param {any} txid - The txid used to get UXTO
+ * @param {string} addr_from - The address that pay
+ * @param {string} addr_to - The address that receive
+ * @param {string} network - The network used for taproot address
+ * @param {string} account - The detail information of 'from taproot address'
+ * @param {string} redeem - The redeem script of 'from UTXO'
+ * @returns {string} - return the txid
+ */
 export async function pay_ins(keypair: any, txid: any, addr_from: any, addr_to: any, network: any, account: any, redeem: any) {
     const utxos = await getUTXOfromTx(txid, addr_from)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
@@ -66,6 +60,18 @@ export async function pay_ins(keypair: any, txid: any, addr_from: any, addr_to: 
     return tx.getId();
 }
 
+/**
+ * pay for a taproot address with internal pubkey
+ *
+ * @param {Signer} keypair - The number of keypair
+ * @param {any} txid - The txid used to get UXTO
+ * @param {string} addr_from - The address that pay
+ * @param {string} addr_to - The address that receive
+ * @param {string} network - The network used for taproot address
+ * @param {string} account - The detail information of 'from taproot address'
+ * @param {string} value - The value used to pay
+ * @returns {string} - return the txid
+ */
 export async function pay_tap(keypair: any, txid: any, addr_from: any, addr_to: any, network: any, account: any, value: any) {
     const utxos = await getUTXOfromTx(txid, addr_from)
     console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
@@ -108,6 +114,19 @@ export async function pay_tap(keypair: any, txid: any, addr_from: any, addr_to: 
     return tx.getId()
 }
 
+/**
+ * build a psbt
+ *
+ * @param {any} redeem - The redeem script of taproot address
+ * @param {any[]} utxos - The UXTOs used as input
+ * @param {string} addr_from - The address that pay
+ * @param {string} addr_to - The address that receive
+ * @param {string} network - The network used for taproot address
+ * @param {string} account - The detail information of 'from taproot address'
+ * @param {string} value - The value used to pay
+ * @param {string} fee - The transaction fee
+ * @returns {string} - return the base64 string of a psbt
+ */
 export function build_psbt(redeem: any, utxos: any[], addr_from: any, addr_to: any, network: any, account: any, value: any, fee: any): string {
     const psbt = new Psbt({ network: choose_network(network) });
     let utxo_value = 0;
@@ -147,6 +166,13 @@ export function build_psbt(redeem: any, utxos: any[], addr_from: any, addr_to: a
     return psbt.toBase64();
 }
 
+/**
+ * sign a psbt
+ *
+ * @param {string} psbt_ - The base64 string of a psbt
+ * @param {string} WIF - The wif of an account
+ * @returns {string} - return the base64 string of a psbt
+ */
 export function sign_psbt(psbt_: string, WIF: string, network: any) {
     const keypair = ECPair.fromWIF(WIF, choose_network(network))
     // Auto-Sign
@@ -161,6 +187,12 @@ export function sign_psbt(psbt_: string, WIF: string, network: any) {
     return psbt.toBase64();
 }
 
+/**
+ * export the pubkey that need to be sign from a psbt
+ *
+ * @param {string} psbt_ - The base64 string of a psbt
+ * @returns {{ length, pubkeys }} - return the number and the pubkeys.
+ */
 export async function export_sign_psbt(psbt_: string) {
     let psbt = Psbt.fromBase64(psbt_)
     let pubkeys = []
@@ -171,16 +203,34 @@ export async function export_sign_psbt(psbt_: string) {
     return { length, pubkeys }
 }
 
+/**
+ * import a psbt from base64
+ *
+ * @param {string} psbt_ - The base64 string of a psbt
+ * @returns {Psbt} - return the Pbst
+ */
 export function import_psbt(psbt_: string) {
     let psbt = Psbt.fromBase64(psbt_)
     return psbt;
 }
 
+/**
+ * export a psbt to base64
+ *
+ * @param {string} psbt_ - The raw psbt
+ * @returns {Psbt} - return the Pbst in Base64
+ */
 export function export_psbt(psbt_: any) {
     let psbt = psbt_.toBase64()
     return psbt;
 }
 
+/**
+ * pay the psbt
+ *
+ * @param {string} psbt_ - The psbt in base64 format
+ * @returns {Psbt} - return the txid
+ */
 export async function pay_psbt(psbt_: string) {
     let psbt = Psbt.fromBase64(psbt_)
     psbt.finalizeAllInputs();
@@ -198,6 +248,16 @@ export async function pay_psbt(psbt_: string) {
     return tx.getId()
 }
 
+/**
+ * pay the psbt when the sign is not full (but reach the threshold)
+ *
+ * @param {string} psbt_ - The psbt in base64 format
+ * @param {number} threshold - The psbt in base64 format
+ * @param {number} sign_num - The current sig 
+ * @param {string} network - The psbt in base64 format
+ * @param {any[]} pks - The public keys array used to sign
+ * @returns {Psbt} - return the txid
+ */
 export function pay_psbt_hex(psbt_: string, threshold: number, sign_num: number, network: string, pks: any[]) {
     let psbt = Psbt.fromBase64(psbt_)
 
@@ -216,6 +276,13 @@ export function pay_psbt_hex(psbt_: string, threshold: number, sign_num: number,
     return tx.toHex()
 }
 
+/**
+ * auto choose UXTO for input
+ *
+ * @param {IUTXO[]} utxos - The UTXO set, you can use getAllUTXOfromAddress to get UXTOs
+ * @param {number} max_amount - The value of UTXO you need
+ * @returns {IUTXO[]} - return the required UXTOs
+ */
 export function auto_choose_UTXO(utxos: IUTXO[], max_amount: number): IUTXO[] {
     // Filter out UTXOs with a value less than 1000 satoshis (to avoid brc20)
     // and the coinbase transaction (coinbase transaction will lock for 100 block)
@@ -243,7 +310,15 @@ export function auto_choose_UTXO(utxos: IUTXO[], max_amount: number): IUTXO[] {
     return chosenUTXOs;
 }
 
-
+/**
+ * auto choose UXTO for input that related to brc20
+ *
+ * @param {IUTXO[]} utxos - The UTXO set, you can use getAllUTXOfromAddress to get UXTOs
+ * @param {number} max_amount - The value of UTXO you need
+ * @param {number} decimal - The decimal of the brc20 token
+ * @param {string} ticker - The tick/name of brc20 token
+ * @returns {BRC20UTXO[]} - return the required UXTOs
+ */
 export function auto_choose_brc20_UTXO(utxos: BRC20UTXO[], max_amount: number, decimal: number, ticker: string): BRC20UTXO[] {
     // Filter out UTXOs with the coinbase transaction (coinbase transaction will lock for 100 block)
     let filteredUTXOs = utxos.filter(utxo => utxo.brc20.tick == ticker);
@@ -272,6 +347,7 @@ export function auto_choose_brc20_UTXO(utxos: BRC20UTXO[], max_amount: number, d
 
 //----------------------Wallet API-------------------------------
 
+/// Used in wallet example
 export async function pay_ins_hex(WIF: any, utxos: any, addr_to: any, network: any) {
 
     const keypair = ECPair.fromWIF(WIF)

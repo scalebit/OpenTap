@@ -8,6 +8,16 @@ import { choose_network, toXOnly } from "../taproot/utils.js";
 
 const URL = `https://turbo.ordinalswallet.com`
 
+/**
+ * Basic inscription builder
+ *
+ * @param {Signer} keypair - The number of keypair
+ * @param {string} p - The mark of inscription, like ord
+ * @param {string} data - The data inside an inscription
+ * @param {string} type - type of the inscription, like text/plain
+ * @param {string} network - The network used for taproot address
+ * @returns {{ p2tr, redeem }} - return an taproot address and its reedem script
+ */
 export function ins_builder(keypair: Signer, p: string, data: string, type: string, network: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
@@ -26,6 +36,7 @@ export function ins_builder(keypair: Signer, p: string, data: string, type: stri
     let { p2tr, redeem } = taproot_address_from_asm(script.compile(ins_script), keypair, network)
     return { p2tr, redeem }
 }
+
 
 export async function fetch_inscriptions_rpc(id: string) {
     return new Promise<string>((resolve, reject) => {
@@ -74,7 +85,16 @@ export async function fetch_wallet_rpc(address: string) {
     })
 }
 
-
+/**
+ * A whole process of building an inscription
+ *
+ * @param {Signer} keypair - The number of keypair
+ * @param {string} p - The mark of inscription, like ord
+ * @param {string} data - The data inside an inscription
+ * @param {string} txid - The txid used to reveal
+ * @param {string} type - type of the inscription, like text/plain
+ * @param {string} network - The network used for taproot address
+ */
 export async function ins_workflow(keypair: Signer, p: string, data: string, txid: string, type: string, network: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),

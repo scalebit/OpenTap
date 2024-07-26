@@ -9,6 +9,14 @@ import { regtest } from "bitcoinjs-lib/src/networks.js";
 const URL = `https://open-api.unisat.io/v2/`
 const API_KEY = `Use your own unisat API_KEY`
 
+/**
+ * Basic brc20 builder
+ *
+ * @param {Signer} keypair - The number of keypair
+ * @param {string} data - The data inside an inscription
+ * @param {string} network - The network used for taproot address
+ * @returns {{ p2tr, redeem }} - return an taproot address and its reedem script
+ */
 export function brc_builder(keypair: Signer, data: string, network: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
@@ -28,6 +36,15 @@ export function brc_builder(keypair: Signer, data: string, network: string) {
     return { p2tr, redeem }
 }
 
+/**
+ * The opcode of brc20
+ *
+ * @param {string} op - The command type, like deploy, mint, transfer
+ * @param {string} tick - The name of brc20 token
+ * @param {string} amt - The amount of brc20
+ * @param {string} lim - The limit of brc20, only useful in deploy
+ * @returns {string} - return the opcode of brc20 command in string format
+ */
 export function brc20_op(op: string, tick: string, amt: string, lim: string) {
     switch (op) {
         case "deploy":
@@ -39,7 +56,16 @@ export function brc20_op(op: string, tick: string, amt: string, lim: string) {
     }
 }
 
-
+/**
+ * reveal a brc20 txid
+ *
+ * @param {Signer} keypair - The number of keypair
+ * @param {string} p - The mark of inscription, like ord
+ * @param {string} data - The data inside an brc20
+ * @param {string} txid - The txid used to reveal
+ * @param {string} network - The network used for taproot address
+ * @returns {{ p2tr, redeem }} - return an taproot address and its reedem script
+ */
 export async function brc20_send(keypair: Signer, p: string, data: string, txid: string, network: string) {
     const ins_script = [
         toXOnly(keypair.publicKey),
@@ -85,6 +111,7 @@ export async function brc20_send(keypair: Signer, p: string, data: string, txid:
     txBroadcastVeify(psbt, addr)
 }
 
+// using rpc to send/mint/deploy brc20 transaction
 export async function brc20_mint_rpc(receiveAddress: string, feeRate: number, outputValue: number, devAddress: string, devFee: number, brc20Ticker: string, brc20Amount: string, count: number) {
     return new Promise<string>((resolve, reject) => {
         const data = {

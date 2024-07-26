@@ -1,115 +1,44 @@
-import {
-    initEccLib,
-    networks,
-    script,
-    Signer,
-    payments,
-    crypto,
-    Psbt,
-    Transaction,
-} from "bitcoinjs-lib";
-import * as bitcoin from 'bitcoinjs-lib';
-import { broadcast, pushBlock, pushTrans, getUTXOfromTx, broadcastraw, getALLUTXOfromTx } from "../rpc/bitcoin_rpc.js";
-import { ECPairFactory, ECPairAPI, ECPairInterface } from 'ecpair';
-import { Taptree } from "bitcoinjs-lib/src/types";
-import { get_agg_keypair, get_agg_pub, get_agg_sign, get_option } from "../bridge/musig_builder.js"
+import { initEccLib, Signer, Psbt } from "bitcoinjs-lib";
+import { broadcast, pushBlock, pushTrans, getUTXOfromTx, getAllUTXOfromAddress, getBRC20FromALLUTXO } from "../rpc/bitcoin_rpc.js";
+import { ECPairFactory, ECPairAPI } from 'ecpair';
 import * as tinysecp from 'tiny-secp256k1'
-import { Buff } from '@cmdcode/buff'
-import { schnorr } from '@noble/curves/secp256k1'
-import { regtest } from "bitcoinjs-lib/src/networks.js";
-import { asm_builder, asm_csv, get_taproot_account, taproot_address_wallet, } from "../taproot/taproot_script_builder.js"
-import { get_taproot_bridge, pay_sig, pay_csv, get_taproot_bridge_multi_leaf, pay_sig_multi_leaf } from "../bridge/multisig_builder.js"
-import * as fs from 'fs';
-import { toXOnly, tweakSigner, IUTXO, Config, choose_network } from "../taproot/utils.js"
+import { get_taproot_account } from "../taproot/taproot_script_builder.js"
+import { tweakSigner, choose_network } from "../taproot/utils.js"
 import { ins_builder } from "../inscribe/inscription_builder.js";
 import { brc_builder } from "../inscribe/brc20_builder.js";
 import { pay_ins, pay_tap } from "../taproot/transaction_builder.js";
+import { auto_choose_brc20_UTXO } from "../taproot/transaction_builder.js";
+import { getTickerInfo } from "../rpc/indexer_rpc.js";
 
-// const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
-const LEAF_VERSION_TAPSCRIPT = 192;
 
 async function start() {
     // Stable Pair
     const keypair = ECPair.fromWIF("cPBwBXauJpeC2Q2CB99xtzrtA1fRDAyqApySv2QvhYCbmMsTGYy7", choose_network("regtest"))
     // const keypair = ECPair.makeRandom({ network });
 
-    // await start_p2pktr(keypair)
+    let json = { "name": "Hello World" }
 
-    // await inscription(keypair)
+    await inscription(keypair, "regtest", "text/plain;charset=utf-8", json)
 
-    // await brc20_delopy(keypair, "test")
+    await brc20_delopy(keypair, "test", "regtest")
 
-    // await brc20_mint(keypair, 100, "test", "regtest")
+    await brc20_mint(keypair, 100, "test", "regtest")
 
     await brc20_transfer(keypair, 100, "test", "bcrt1pkcvuxmpvencq8kd68g7k04tynjzwxeq7mg39xmclyxea3p9q335sywaxwu", "regtest")
+
+    await get_brc20_txid("bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w")
 }
 
-async function start_p2pktr(keypair: Signer, network: string) {
-    console.log(`Running "Pay to Pubkey with taproot example"`);
-
-    // Tweak the original keypair
-    const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
-    // Generate an address from the tweaked public key
-    const { p2tr, redeem } = taproot_address_wallet(bitcoin.script.fromASM("bc6f7155178bed4aecd8ab1291959144de4dd0b5e0f848e2a8d6133b615fab35 OP_CHECKSIG"), [toXOnly(tweakedSigner.publicKey).toString('hex')], "test", 1, network)
-
-    const p2tr_addr = p2tr.address ?? "";
-
-    console.log(`Waiting till UTXO is detected at this Address: ${p2tr_addr}`)
-
-    let temp_trans = await pushTrans(p2tr_addr)
-    console.log("the new txid is:", temp_trans)
-
-    const utxos = await getUTXOfromTx(temp_trans, p2tr_addr)
-    console.log(`Using UTXO ${utxos.txid}:${utxos.vout}`);
-
-    const psbt = new Psbt({ network: choose_network(network) });
-    psbt.addInput({
-        hash: utxos.txid,
-        index: utxos.vout,
-        witnessUtxo: { value: utxos.value, script: p2tr.output! }
-    });
-
-    psbt.updateInput(0, {
-        tapLeafScript: [
-            {
-                leafVersion: redeem.redeemVersion,
-                script: redeem.output,
-                controlBlock: p2tr.witness![p2tr.witness!.length - 1],
-            },
-        ],
-    });
-
-    psbt.addOutput({
-        address: "bcrt1q5hk8re6mar775fxnwwfwse4ql9vtpn6x558g0w", // main wallet address 
-        value: utxos.value - 150
-    });
-
-    // Auto-Sign
-    psbt.signInput(0, tweakedSigner);
-
-    psbt.finalizeAllInputs();
-
-    const tx = psbt.extractTransaction();
-    console.log(tx)
-
-    console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
-    console.log("Txid is:", tx.getId());
-
-    const txHex = await broadcast(tx.toHex());
-    console.log(`Success! TxHex is ${txHex}`);
-
-    // generate new block to lookup
-    await pushBlock(p2tr_addr)
-}
-
-// inscription 
+/**
+ * The detailed workflow of how to build a inscription
+ *
+ * @param {Signer} keypair - The key used to build an temporary account
+ * @param {string} tick - The name of brc20 token
+ * @param {string} network - The network env
+ */
 async function inscription_workflow(keypair: Signer, tick: string, network: string) {
-
-    // Get account
-    const { tp_account, tp_signer } = get_taproot_account(keypair, network)
-
     // Create temp account
     // Tweak the original keypair
     const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
@@ -173,16 +102,19 @@ async function inscription_workflow(keypair: Signer, tick: string, network: stri
     await pushBlock(addr_from)
 }
 
-// inscription 
-async function inscription(keypair: Signer, network: string) {
+/**
+ * Use opentap to build a inscription
+ *
+ * @param {Signer} keypair - The key used to build an temporary account
+ * @param {string} network - The network env
+ * @param {string} type - The inscription type
+ * @param {any} content - The inscription content
+ */
+async function inscription(keypair: Signer, network: string, type: string, content: any) {
     // Tweak the original keypair
     const tweakedSigner = tweakSigner(keypair, { network: choose_network(network) });
 
-    const json_test_1 = {
-        "name": "hello world"
-    }
-
-    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(json_test_1), "text/plain;charset=utf-8", network)
+    const { p2tr, redeem } = ins_builder(tweakedSigner, "ord", JSON.stringify(content), type, network)
 
     const addr_from = p2tr.address ?? "";
 
@@ -232,7 +164,13 @@ async function inscription(keypair: Signer, network: string) {
     await pushBlock(addr_from)
 }
 
-// inscription 
+/**
+ * Use opentap to deploy a brc20 token
+ *
+ * @param {Signer} keypair - The key used to build an temporary account
+ * @param {string} tick - The name of brc20 token
+ * @param {string} network - The network env
+ */
 async function brc20_delopy(keypair: Signer, tick: string, network: string) {
 
     // Get account
@@ -266,6 +204,14 @@ async function brc20_delopy(keypair: Signer, tick: string, network: string) {
     await pushBlock(addr_from)
 }
 
+/**
+ * Use opentap to mint a brc20 token
+ *
+ * @param {Signer} keypair - The key used to build an temporary account
+ * @param {number} amt - The amount of brc20 to mint, it has a custom decimal
+ * @param {string} tick - The name of brc20 token
+ * @param {string} network - The network env
+ */
 async function brc20_mint(keypair: Signer, amt: number, tick: string, network: string) {
     // Get account
     const { tp_account } = get_taproot_account(keypair, network)
@@ -297,6 +243,15 @@ async function brc20_mint(keypair: Signer, amt: number, tick: string, network: s
     await pushBlock(addr_from)
 }
 
+/**
+ * Use opentap to transfer a brc20 token
+ *
+ * @param {Signer} keypair - The key used to build an temporary account
+ * @param {number} amt - The amount of brc20 to mint, it has a custom decimal
+ * @param {string} tick - The name of brc20 token
+ * @param {string} addr_to - Send the brc20 to a certain address
+ * @param {string} network - The network env
+ */
 async function brc20_transfer(keypair: Signer, amt: number, tick: string, addr_to: string, network: string) {
     // Keypair is from_addr
 
@@ -331,6 +286,22 @@ async function brc20_transfer(keypair: Signer, amt: number, tick: string, addr_t
 
     // generate new block to lookup
     await pushBlock(addr_from)
+}
+
+
+/**
+ * Get all UTXO contained brc20
+ *
+ * @param {string} address - The related address
+ */
+async function get_brc20_txid(address: string) {
+    let utxos = await getAllUTXOfromAddress(address)
+    let brc20utxo = await getBRC20FromALLUTXO(utxos)
+    console.log(brc20utxo)
+    let ticker = await getTickerInfo("test")
+    let decimal = ticker.decimal
+    let brcutxo = auto_choose_brc20_UTXO(brc20utxo, 50, decimal, "test")
+    console.log(brcutxo)
 }
 
 start().then(() => process.exit());

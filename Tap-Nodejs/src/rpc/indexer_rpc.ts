@@ -1,6 +1,8 @@
 import axios, { AxiosResponse } from "axios";
 const API_URL = `http://127.0.0.1`
 
+// Here is the warpped API of ord indexer
+
 export async function getBRC20Balances(address: string): Promise<ApiResponse> {
     const URL = `${API_URL}/api/v1/brc20/address/${address}/balance`;
 

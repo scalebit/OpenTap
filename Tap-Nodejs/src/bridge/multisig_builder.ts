@@ -7,7 +7,7 @@ import { broadcast, pushBlock, pushTrans, getUTXOfromTx } from "../rpc/bitcoin_r
 import { ECPairFactory, ECPairAPI } from 'ecpair';
 import { Taptree } from "bitcoinjs-lib/src/types";
 import { asm_builder, asm_csv } from "../taproot/taproot_script_builder.js"
-import { toXOnly } from "../taproot/utils.js"
+import { IUTXO, toXOnly } from "../taproot/utils.js"
 import * as tinysecp from 'tiny-secp256k1'
 
 
@@ -15,6 +15,17 @@ initEccLib(tinysecp as any);
 const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 const LEAF_VERSION_TAPSCRIPT = 192;
 
+/**
+ * Get a mutli-sig taproot account
+ *
+ * @param {Signer} keypair - The keypair used as internal pubkeys
+ * @param {Signer[]} keys - The keypair used to sign the transaction
+ * @param {number} keynum - number of required keys
+ * @param {number} threshold - The threshold of the wallet
+ * @param {number} locktime - The relatively locking time/block
+ * @param {string} network - The network used for taproot address
+ * @returns {p2tr_scripts, p2csvtr, utxos} - return the multi-sig redeem script, CSV redeem script, UTXOs
+ */
 export async function get_taproot_bridge(keypair: Signer, keys: any[], keynum: number, threshold: number, locktime: number, network: bitcoin.Network) {
     const internalKey = keypair;
     const Threshold = threshold;
@@ -90,6 +101,17 @@ export async function get_taproot_bridge(keypair: Signer, keys: any[], keynum: n
     return [p2pktr, p2csvtr, utxos];
 }
 
+/**
+ * Pay/Unlock a mutli-sig taproot account
+ *
+ * @param {string} network - The network used for taproot address
+ * @param {IUTXO} utxo - The utxo used as input
+ * @param {any} p2pktr - The taproot account
+ * @param {Signer[]} keys - The keypair used to sign the transaction
+ * @param {number} threshold - The threshold of the wallet
+ * @param {Buffer[]} pubkeys - The pubkeys that create the taproot account (don't need privat key)
+ * @returns { string } - return the txid.
+ */
 export async function pay_sig(network: any, utxos: any, p2pktr: any, keys: Signer[], threshold: number, pubkeys: Buffer[]) {
 
     const psbt = new bitcoin.Psbt({ network });
@@ -129,7 +151,6 @@ export async function pay_sig(network: any, utxos: any, p2pktr: any, keys: Signe
                 });
             }
         }
-
     }
 
     psbt.finalizeAllInputs();
@@ -138,9 +159,21 @@ export async function pay_sig(network: any, utxos: any, p2pktr: any, keys: Signe
     const txHex = await broadcast(tx.toHex());
     console.log(`Success! TxHex is ${txHex}`);
 
-    await pushBlock(p2pktr.address!)
+    // await pushBlock(p2pktr.address!)
+
+    return tx.getId();
 }
 
+/**
+ * Pay/Unlock a CSV leafscript of a taproot account
+ *
+ * @param {string} network - The network used for taproot address
+ * @param {IUTXO[]} utxos - The utxos used as input
+ * @param {any} p2csvtr - The taproot account
+ * @param {Signer} keypair - The keypair used to sign the transaction
+ * @param {number} Locktime - The relatively locking time/block
+ * @returns {string} - return the txid
+ */
 export async function pay_csv(network: any, utxos: any, p2csvtr: any, keypair: Signer, Locktime: number) {
     const psbt = new bitcoin.Psbt({ network });
     psbt.addInput({
@@ -172,22 +205,34 @@ export async function pay_csv(network: any, utxos: any, p2csvtr: any, keypair: S
     console.log(`Broadcasting Transaction Hex: ${tx.toHex()}`);
     console.log("Txid is:", tx.getId());
 
-    // Assume we have waited and unlock
-    for (var i = 0; i < Locktime; i++) {
-        await pushBlock(p2csvtr.address!)
-    }
+    // Assume we have waited and unlock!
+    // for (var i = 0; i < Locktime; i++) {
+    //     await pushBlock(p2csvtr.address!)
+    // }
 
-    const txHex = await broadcast(tx.toHex());
-    console.log(`Success! TxHex is ${txHex}`);
+    // const txHex = await broadcast(tx.toHex());
+    // console.log(`Success! TxHex is ${txHex}`);
 
-    let tx_verify = await getUTXOfromTx(tx.getId(), p2csvtr.address!)
-    console.log(`Get UTXO ${tx_verify}`);
+    // let tx_verify = await getUTXOfromTx(tx.getId(), p2csvtr.address!)
+    // console.log(`Get UTXO ${tx_verify}`);
 
-    await pushBlock(p2csvtr.address!)
+    // await pushBlock(p2csvtr.address!)
+
+    return tx.getId();
 }
 
-// Under testing
-export async function get_taproot_bridge_multi_leaf(keypair: Signer, keys: any[], keynum: number, threshold: number, locktime: number, network: bitcoin.Network, key_first: Signer) {
+/**
+ * Get a mutli-sig leafscript of a taproot account
+ *
+ * @param {Signer} keypair - The keypair used as internal pubkeys
+ * @param {Signer[]} keys - The keypair used to sign the transaction
+ * @param {number} keynum - number of required keys
+ * @param {number} threshold - The threshold of the wallet
+ * @param {number} locktime - The relatively locking time/block
+ * @param {string} network - The network used for taproot address
+ * @returns {p2tr_scripts, p2csvtr, utxos, combinations} - return the multi-sig redeem script, CSV redeem script, UTXOs and the combinations
+ */
+export async function get_taproot_bridge_multi_leaf(keypair: Signer, keys: any[], keynum: number, threshold: number, locktime: number, network: bitcoin.Network) {
     const internalKey = keypair;
     const KeyNum = keynum;
 
@@ -260,7 +305,17 @@ export async function get_taproot_bridge_multi_leaf(keypair: Signer, keys: any[]
     return [p2tr_scripts, p2csvtr, utxos, combinations];
 }
 
-export async function pay_sig_multi_leaf(network: any, utxos: any, p2pktr: any[], keys: Signer[], threshold: number, locker: number) {
+/**
+ * Pay/Unlock a mutli-sig leafscript of a taproot account
+ *
+ * @param {string} network - The network used for taproot address
+ * @param {IUTXO[]} utxos - The utxos used as input
+ * @param {any[]} p2pktr - The taproot account
+ * @param {Signer[]} keys - The keypair used to sign the transaction
+ * @param {number} locker - The locking index of the taproot redeem leafscript
+ * @returns { string } - return the txid.
+ */
+export async function pay_sig_multi_leaf(network: any, utxos: any, p2pktr: any[], keys: Signer[], locker: number) {
 
     const psbt = new bitcoin.Psbt({ network });
     psbt.addInput({
@@ -297,10 +352,18 @@ export async function pay_sig_multi_leaf(network: any, utxos: any, p2pktr: any[]
     const txHex = await broadcast(tx.toHex());
     console.log(`Success! TxHex is ${txHex}`);
 
-    await pushBlock(p2pktr[locker].address!)
+    // await pushBlock(p2pktr[locker].address!)
+
+    return tx.getId();
 }
 
-// Helper function to generate all m-of-m combinations
+/**
+ * Helper function to generate all m-of-m combinations
+ *
+ * @param {any[]} arr - The keypair used in the generation
+ * @param {number} threshold - The threshold of the wallet
+ * @returns { any[] } - return pubkeys.
+ */
 function getCombinations(arr: any[], threshold: number) {
     const combinations: any[] = [];
     function combine(start: number, choose_: number, chosen: any[]) {
@@ -316,7 +379,13 @@ function getCombinations(arr: any[], threshold: number) {
     return combinations;
 }
 
-// Build a Taptree from given combinations
+/**
+ * Build a Taptree from given combinations
+ *
+ * @param {any[]} combinations - The keypair used in the generation
+ * @param {number} threshold - The threshold of the wallet
+ * @returns { Taptree } - return the taptree.
+ */
 function buildTaptree(combinations: any[], threshold: number) {
     const leaves = combinations.map((combination: any[]) => {
         return { output: asm_builder(combination, threshold) };

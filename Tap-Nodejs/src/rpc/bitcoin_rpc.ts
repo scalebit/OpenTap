@@ -43,6 +43,12 @@ export async function pushBlock(address: string) {
     })
 }
 
+/**
+ * Get some coin from the main wallet, you must have a main wallet in the regtest
+ *
+ * @param {string} address - The address
+ * @param {number} amt - The amount you want to transfer
+ */
 export async function pushTrans(address: string, amt?: number) {
     return new Promise<string>((resolve, reject) => {
         let amount = amt ?? 0.2
@@ -65,6 +71,11 @@ export async function pushTrans(address: string, amt?: number) {
     })
 }
 
+/**
+ * Get UTXO list from a wallet (can not be used for a tempoary address)
+ *
+ * @param {string} address - The address
+ */
 export async function waitUntilUTXO(address: string) {
     return new Promise<IUTXO[]>((resolve, reject) => {
         let intervalId: any;
@@ -93,7 +104,12 @@ export async function waitUntilUTXO(address: string) {
     });
 }
 
-
+/**
+ * Get a UXTO from a transaction ID
+ *
+ * @param {string} txid - The id of a transaction
+ * @param {string} address - The target address
+ */
 export async function getUTXOfromTx(txid: string, address: string) {
     return new Promise<IUTXO>((resolve, reject) => {
         const data = {
@@ -107,10 +123,7 @@ export async function getUTXOfromTx(txid: string, address: string) {
                 firstResponse => {
                     // Parse to Json
                     let txjson = JSON.parse(JSON.stringify(firstResponse.data))
-                    // console.log(txjson)
-                    // console.log(txjson.result.vout)
                     for (var i = 0; i < txjson.result.vout.length; i++) {
-                        // console.log(txjson.result.vout[i])
                         let out = JSON.parse(JSON.stringify(txjson.result.vout[i]));
                         if (out.scriptPubKey.address == address) {
                             console.log(out)
@@ -137,6 +150,12 @@ export async function getUTXOfromTx(txid: string, address: string) {
     });
 }
 
+/**
+ * Get ALL UXTO from a transaction ID
+ *
+ * @param {string} txid - The id of a transaction
+ * @param {string} address - The target address
+ */
 export async function getALLUTXOfromTx(txid: string, address: string) {
     return new Promise<IUTXO[]>((resolve, reject) => {
         const data = {
@@ -151,13 +170,9 @@ export async function getALLUTXOfromTx(txid: string, address: string) {
                     let ALL_UTXO: IUTXO[] = []
                     // Parse to Json
                     let txjson = JSON.parse(JSON.stringify(firstResponse.data))
-                    // console.log(txjson)
-                    // console.log(txjson.result.vout)
                     for (var i = 0; i < txjson.result.vout.length; i++) {
-                        // console.log(txjson.result.vout[i])
                         let out = JSON.parse(JSON.stringify(txjson.result.vout[i]));
 
-                        console.log(out)
                         let UTXO: IUTXO = {
                             txid: txjson.result.txid,
                             vout: out.n,
@@ -181,6 +196,11 @@ export async function getALLUTXOfromTx(txid: string, address: string) {
     });
 }
 
+/**
+ * Get UTXO list from a wallet (can be used for a tempoary address)
+ *
+ * @param {string} address - The address
+ */
 export async function getAllUTXOfromAddress(address: string) {
     return new Promise<IUTXO[]>((resolve, reject) => {
         const data = {
@@ -220,6 +240,11 @@ export async function getAllUTXOfromAddress(address: string) {
     });
 }
 
+/**
+ * Get UTXO that related to brc20 from a utxo set
+ *
+ * @param {IUTXO[]} utxo - The set of UTXO
+ */
 export async function getBRC20FromALLUTXO(utxo: IUTXO[]) {
     return new Promise<BRC20UTXO[]>(async (resolve, reject) => {
         try {
@@ -260,6 +285,11 @@ export async function getBRC20FromALLUTXO(utxo: IUTXO[]) {
     });
 }
 
+/**
+ * Get UTXO that related to brc20 from a utxo
+ *
+ * @param {IUTXO} utxo - The UTXO
+ */
 export async function getBRC20FromUTXO(utxo: IUTXO) {
     return new Promise<BRC20UTXO[]>((resolve, reject) => {
         try {
@@ -300,6 +330,11 @@ export async function getBRC20FromUTXO(utxo: IUTXO) {
     });
 }
 
+/**
+ * Get the tick information of a brc20 token, must used with the ord indexer
+ *
+ * @param {string} ticker - The tick name
+ */
 export async function getTick(ticker: string) {
     return new Promise<any>((resolve, reject) => {
         try {
@@ -316,6 +351,11 @@ export async function getTick(ticker: string) {
     });
 }
 
+/**
+ * Boradcast a raw transaction
+ *
+ * @param {string} txHex - The raw transaction
+ */
 export async function broadcast(txHex: string) {
     return new Promise<string>((resolve, reject) => {
         const data = {
@@ -342,6 +382,11 @@ export async function broadcast(txHex: string) {
     });
 }
 
+/**
+ * Boradcast a raw transaction with fee setting
+ *
+ * @param {string} txHex - The raw transaction
+ */
 export async function broadcastraw(txHex: string) {
     return new Promise<string>((resolve, reject) => {
         const data = {
@@ -369,6 +414,11 @@ export async function broadcastraw(txHex: string) {
 
 }
 
+/**
+ * Get a rune from txid, used as a simple indexer
+ *
+ * @param {string} txid - The transaction id
+ */
 export async function getRunefromTx(txid: string) {
     return new Promise<Runestone>((resolve, reject) => {
         const data = {
