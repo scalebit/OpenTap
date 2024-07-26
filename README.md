@@ -2,16 +2,16 @@
 
 OpenTap is both a library and an integrated demo for tapscript developers. We wrapped the most commonly used tapscript as a module for developers. You can build taproot-related apps in a more easy way.
 
-Currently we are supporting `node.js` environment, `go` version is on the way. The function we are currently supported:
+Currently, we are supporting the `node.js` environment, `go` version is on the way. The function we are currently supported:
 
 - [x]  Taproot Builder - Easily to create a taproot address/wallet
 - [x]  Script (ASM) Builder - Build Bitcoin raw script by opcode
 - [x]  Multi-Sig Builder - Build Multi-Sig script and signing
 - [x]  Inscription Builder - Build basic Brc20/Rune/Inscription
 - [x]  RPC/API - Module used to get/post data to RPC/API
-- [x]  Demo - A integrated demo that build multi-sig wallet in browser
+- [x]  Demo - An integrated demo that builds a multi-sig wallet in the browser
 
-And we are working on:
+We are working on:
 
 - [ ]  Assets - Fully support Bitcoin native assets
 - [ ]  DLC - Implement of discreet log contract
@@ -22,7 +22,7 @@ And we are working on:
 
 ## **Test Environment**
 
-Before you using/testing this repo, we strongly recommend you to setup a local bitcoin test envirnment (regtest). Building a test env is tedious work, we have managed to organize and testify all the necessary steps to build it, which is much quicker to test anything compared to Bitcoin testnet. Our env include:
+Before you using/testing this repo, we strongly recommend you to set up a local Bitcoin test environment (regtest). Building a test environment is tedious work, we have managed to organize and testify all the necessary steps to build it, which is much quicker to test anything compared to Bitcoin testnet. Our env include:
 
 - [x]  Bitcoin Regtest
 - [x]  Bitcoin Explorer
