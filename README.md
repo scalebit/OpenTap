@@ -9,27 +9,27 @@ Currently we are supporting `node.js` environment, `go` version is on the way. T
 - [x]  Multi-Sig Builder - Build Multi-Sig script and signing
 - [x]  Inscription Builder - Build basic Brc20/Rune/Inscription
 - [x]  RPC/API - Module used to get/post data to RPC/API
-- [x]  Demo - A integrated demo that build multi-sig bridge in L1
+- [x]  Demo - A integrated demo that build multi-sig wallet in browser
 
 And we are working on:
 
 - [ ]  Assets - Fully support Bitcoin native assets
 - [ ]  DLC - Implement of discreet log contract
-- [ ]  BitVM - Tapscript based on BitVM (and BitVM improvment)
+- [ ]  BitVM - Tapscript based on BitVM (and BitVM improvement)
 - [ ]  Go - Fully supported go language
 
 **DISCLAIMER: We haven’t finished our inside auditing yet, so use it at your own risk before we fully confirm the source code.**
 
 ## **Test Environment**
 
-Before you using/testing this repo, we strongly recommend you to setup a local bitcoin test envirnment (regtest). Building a test env is a tidious work, we have managed to organize and testfiy all the necessary step to build it, which is much more quicker to test anything compare to Bitcoin testnet. Our env include:
+Before you using/testing this repo, we strongly recommend you to setup a local bitcoin test envirnment (regtest). Building a test env is tedious work, we have managed to organize and testify all the necessary steps to build it, which is much quicker to test anything compared to Bitcoin testnet. Our env include:
 
 - [x]  Bitcoin Regtest
 - [x]  Bitcoin Explorer
 - [x]  Brc20/Inscription Indexer
 - [ ]  Rune Indexer
 
-You can go to the `./Environment` folder for all the instrcution you need.
+You can go to the `./Environment` folder for all the instruction you need.
 
 ## Reference
 
